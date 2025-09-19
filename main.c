@@ -1,11 +1,11 @@
+#include <ctype.h>
 #include <sqlite3.h>
-#include <stdio.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <time.h>
-#include <stdlib.h>
-#include <ctype.h>
 
 uint8_t range;
 time_t t;
@@ -13,10 +13,12 @@ struct tm tm;
 int currentDay;
 int currentMonth;
 int currentYear;
+int currentHour;
+int currentMin;
 
 void trim(char *str);
 void set_time_date();
-
+void task_complete(char *id);
 bool is_config()
 {
     FILE *file = fopen(".config", "r");
@@ -85,13 +87,14 @@ void set_config()
     }
 
     // 2. Create table
-    const char *sql_create = "CREATE TABLE IF NOT EXISTS tasks ("
-                             "id INTEGER PRIMARY KEY AUTOINCREMENT, "
-                             "date INTEGER NOT NULL, "
-                             "time INTEGER,"
-                             "task TEXT NOT NULL,"
-                             "date_added INTEGER NOT NULL,"
-                             "done INTEGER DEFAULT 0);";
+    const char *sql_create =
+        "CREATE TABLE IF NOT EXISTS tasks ("
+        "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+        "date INTEGER NOT NULL, "
+        "time INTEGER,"
+        "task TEXT NOT NULL,"
+        "date_added INTEGER NOT NULL,"
+        "done INTEGER DEFAULT 0);";
     rc = sqlite3_exec(db, sql_create, 0, 0, &err_msg);
     if (rc != SQLITE_OK)
     {
@@ -155,7 +158,8 @@ char *input_where(char *when)
         }
         else
         {
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth, day);
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     day);
             return result;
         }
 
@@ -205,29 +209,39 @@ void task_insert(char *input)
         trim(token);
         char *time = malloc(strlen(token) + 1);
         strcpy(time, token);
-        printf("%s -3\n", token);
-        ;
         char sqlInsert[2048];
-        snprintf(sqlInsert, sizeof(sqlInsert), "INSERT INTO tasks(date, time, task, date_added) VALUES(strftime('%%s', '%s', 'start of day'), strftime('%%s', '%s', '%s:00') %% 86400, '%s', strftime('%%s', 'now'))", when, when, time, task);
+        snprintf(
+            sqlInsert, sizeof(sqlInsert),
+            "INSERT INTO tasks(date, time, task, date_added) "
+            "VALUES(strftime('%%s', '%s', 'start of day'), strftime('%%s', "
+            "'%s', '%s:00') %% 86400, '%s', strftime('%%s', 'now'))",
+            when, when, time, task);
         rc = sqlite3_exec(db, sqlInsert, 0, 0, &err_msg);
         if (rc != SQLITE_OK)
         {
             printf("SQL error: %s\n", err_msg);
             sqlite3_free(err_msg);
         }
+        else
+            printf("Task: %s\nDate: %s %s\tADDED\n", task, when, time);
         free(time);
     }
     else
     {
-        printf("%s - date\n%s - task\n", when, task);
         char sqlInsert[2048];
-        snprintf(sqlInsert, sizeof(sqlInsert), "INSERT INTO tasks(date, task, date_added) VALUES(strftime('%%s', '%s', 'start of day'), '%s', strftime('%%s', 'now'))", when, task);
+        snprintf(
+            sqlInsert, sizeof(sqlInsert),
+            "INSERT INTO tasks(date, task, date_added) VALUES(strftime('%%s', "
+            "'%s', 'start of day'), '%s', strftime('%%s', 'now'))",
+            when, task);
         rc = sqlite3_exec(db, sqlInsert, 0, 0, &err_msg);
         if (rc != SQLITE_OK)
         {
             printf("SQL error: %s\n", err_msg);
             sqlite3_free(err_msg);
         }
+        else
+            printf("Task: %s\nDate: %s\tADDED\n", task, when);
     }
     free(whenSt);
     free(when);
@@ -235,7 +249,7 @@ void task_insert(char *input)
     sqlite3_close(db);
 }
 
-void task_show(char *arg)
+void task_show(char *arg, char option)
 {
     sqlite3 *db;
     int rc = sqlite3_open("tasks.db", &db);
@@ -247,7 +261,134 @@ void task_show(char *arg)
 
     char sqlSelect[1024];
 
-    snprintf(sqlSelect, sizeof(sqlSelect), "SELECT * FROM tasks");
+    switch (option)
+    {
+    case 's':
+    {
+        set_time_date();
+        char *token = strtok(arg, "|");
+        trim(token);
+
+        char *whenSt = malloc(strlen(token) + 1);
+        strcpy(whenSt, token);
+
+        token = strtok(NULL, "|");
+        char *when = input_where(whenSt);
+
+        struct tm t = {0};
+        sscanf(when, "%4d-%2d-%2d", &t.tm_year, &t.tm_mon, &t.tm_mday);
+        t.tm_year -= 1900;  // struct tm years since 1900
+        t.tm_mon -= 1;      // struct tm months 0-11
+        // Convert to timestamp
+        t.tm_mday += 1;     // to get to whole day
+        time_t timestamp = mktime(&t);
+        time_t timestampNow = time(NULL);
+
+        snprintf(sqlSelect, sizeof(sqlSelect),
+                 "SELECT * FROM tasks WHERE date <= %ld AND date >= %ld",
+                 (long)timestamp, (long)timestampNow);
+
+        free(whenSt);
+        free(when);
+        break;
+    }
+    case 'o':
+    {
+        set_time_date();
+        char *token = strtok(arg, "|");
+        trim(token);
+
+        char *whenSt = malloc(strlen(token) + 1);
+        strcpy(whenSt, token);
+
+        token = strtok(NULL, "|");
+        char *when = input_where(whenSt);
+
+        struct tm t = {0};
+        sscanf(when, "%4d-%2d-%2d", &t.tm_year, &t.tm_mon, &t.tm_mday);
+        t.tm_year -= 1900;  // struct tm years since 1900
+        t.tm_mon -= 1;      // struct tm months 0-11
+        // Convert to timestamp
+
+        time_t timestamp = mktime(&t);
+        t.tm_mday += 1;                  // to get to whole day
+        time_t timestamp1 = mktime(&t);  // to get the whole day
+
+        snprintf(sqlSelect, sizeof(sqlSelect),
+                 "SELECT * FROM tasks WHERE date >= %ld AND date < %ld",
+                 (long)timestamp, (long)timestamp1);
+
+        free(whenSt);
+        free(when);
+        break;
+    }
+    case 't':
+    {
+        set_time_date();
+        char *token = strtok(arg, "|");
+        trim(token);
+
+        char *whenSt = malloc(strlen(token) + 1);
+        strcpy(whenSt, token);
+
+        char *when = input_where(whenSt);
+
+        struct tm t = {0};
+        sscanf(when, "%4d-%2d-%2d", &t.tm_year, &t.tm_mon, &t.tm_mday);
+        t.tm_year -= 1900;  // struct tm years since 1900
+        t.tm_mon -= 1;      // struct tm months 0-11
+        // Convert to timestamp
+        time_t timestamp = mktime(&t);
+        t.tm_mday += 1;                  // to get to whole day
+        time_t timestamp1 = mktime(&t);  // to get the whole day
+
+        snprintf(sqlSelect, sizeof(sqlSelect),
+                 "SELECT * FROM tasks WHERE date >= %ld AND date < %ld AND "
+                 "time NOT NULL",
+                 (long)timestamp, (long)timestamp1);
+
+        free(whenSt);
+        free(when);
+        break;
+    }
+    case 'r':
+    {
+        set_time_date();
+        struct tm t = {0};
+        t.tm_mon = currentMonth - 1;
+        t.tm_mday = currentDay;
+        t.tm_year = currentYear - 1900;
+
+        time_t timestamp = mktime(&t);
+        t.tm_mday += 1;                  // to get to whole day
+        time_t timestamp1 = mktime(&t);  // to get the whole day
+
+        // Get current time in seconds since midnight
+        time_t now = time(NULL);
+        struct tm *now_tm = localtime(&now);
+        int seconds_now =
+            now_tm->tm_hour * 3600 + now_tm->tm_min * 60 + now_tm->tm_sec;
+        int seconds_next = seconds_now + 15 * 60;
+
+
+        snprintf(sqlSelect, sizeof(sqlSelect),
+                 "SELECT * FROM tasks WHERE date >= %ld AND date < %ld AND "
+                 "time >= %d AND time < %d AND done = 0",
+                 (long)timestamp, (long)timestamp1, seconds_now, seconds_next);
+        break;
+    }
+    case '!':
+    {
+
+        snprintf(sqlSelect, sizeof(sqlSelect),
+                 "SELECT * FROM tasks WHERE id = %s", arg);
+
+        break;
+    }
+    case 'a':
+        snprintf(sqlSelect, sizeof(sqlSelect), "SELECT * FROM tasks");
+        break;
+    }
 
     sqlite3_stmt *res;
     rc = sqlite3_prepare_v2(db, sqlSelect, -1, &res, 0);
@@ -274,16 +415,169 @@ void task_show(char *arg)
                 char time_str[16];
                 snprintf(time_str, sizeof(time_str), "%02d:%02d", h, m);
 
-                printf("%s %s -> %s [%s] id:%d\n", date_str, time_str, task, done ? "COMPLETED" : "WORKING", id);
+                if (option == 'r')
+                {
+                    char cmd[1024];
+                    snprintf(cmd, sizeof(cmd),
+                             "xmessage -buttons 'Okay:0,Delay:1' 'Termin in 15 minutes. %s %s'",
+                             task, time_str);
+                    int message = system(cmd);
+                    if (message == 1)
+                    {
+                        system("alacritty --command taskman -delay");
+
+                    }
+                    else
+                    {
+                        char idSt[12];
+                        snprintf(idSt, sizeof(idSt), "%d", id);
+                        task_complete(idSt);
+                    }
+                }
+                else
+                    printf("%s -> %s [%s] id:%d\n", date_str, task,
+                           done ? "COMPLETED" : "WORKING", id);
             }
-            else
-                printf("%s -> %s [%s] id:%d\n", date_str, task, done ? "COMPLETED" : "WORKING", id);
+        }
+        sqlite3_finalize(res);
+
+        sqlite3_close(db);
+    }
+}
+void task_postpone(char *id, char *whenSt)
+{
+    set_time_date();
+    sqlite3 *db;
+    char *err_msg = 0;
+    int rc = sqlite3_open("tasks.db", &db);
+    if (rc != SQLITE_OK)
+    {
+        printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+    char *token = strtok(whenSt, "|");
+    trim(token);
+
+    char* temp = malloc(strlen(token) + 1);
+    strcpy(temp, token);
+
+
+    token = strtok(NULL, "|");
+    char *whenDate = input_where(temp);
+    if (token != NULL)
+    {
+        trim(token);
+        char *time = malloc(strlen(token) + 1);
+        strcpy(time, token);
+        char sqlInsert[2048];
+        snprintf(
+            sqlInsert, sizeof(sqlInsert),
+            "UPDATE tasks SET date = strftime('%%s', '%s', 'start of day'), "
+            "time = strftime('%%s', '%s', '%s:00') %% 86400 WHERE id = %s",
+            whenDate, whenDate, time, id);
+        rc = sqlite3_exec(db, sqlInsert, 0, 0, &err_msg);
+        if (rc != SQLITE_OK)
+        {
+            printf("SQL error: %s\n", err_msg);
+            sqlite3_free(err_msg);
+        }
+        else
+        {
+            printf("Task postponed:\n");
+            task_show(id, '!');
+        }
+        free(time);
+    }
+    else
+    {
+        char sqlUpdate[256];
+        snprintf(sqlUpdate, sizeof(sqlUpdate),
+                 "UPDATE tasks SET date = strftime('%%s', '%s', 'start of day') WHERE id = %s", whenDate, id);
+        rc = sqlite3_exec(db, sqlUpdate, 0, 0, &err_msg);
+        if (rc != SQLITE_OK)
+        {
+            printf("SQL error: %s\n", err_msg);
+            sqlite3_free(err_msg);
+        }
+        else
+        {
+            printf("Task postponed:\n");
+            task_show(id, '!');
         }
     }
-    sqlite3_finalize(res);
+    sqlite3_close(db);
+    free(whenDate);
+    free(temp);
+
+
+
+}
+void remove_task(char *id)
+{
+
+    printf("Are you sure you want to remove task:");
+    task_show(id, '!');
+    printf("(y/n)?\n");
+    char response = getchar();
+    getchar();
+    if (response != 'y' && response != 'Y')
+    {
+        printf("Task removal cancelled.\n");
+        return;
+    }
+
+    sqlite3 *db;
+    char *err_msg = 0;
+    int rc = sqlite3_open("tasks.db", &db);
+    if (rc != SQLITE_OK)
+    {
+        printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    char sqlDelete[256];
+    snprintf(sqlDelete, sizeof(sqlDelete),
+             "DELETE FROM tasks WHERE id = %s", id);
+    rc = sqlite3_exec(db, sqlDelete, 0, 0, &err_msg);
+    if (rc != SQLITE_OK)
+    {
+        printf("SQL error: %s\n", err_msg);
+        sqlite3_free(err_msg);
+    }
+    else
+        printf("Task id:%s REMOVED\n", id);
 
     sqlite3_close(db);
 }
+
+void task_complete(char *id)
+{
+    sqlite3 *db;
+    char *err_msg = 0;
+    int rc = sqlite3_open("tasks.db", &db);
+    if (rc != SQLITE_OK)
+    {
+        printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    char sqlUpdate[256];
+    snprintf(sqlUpdate, sizeof(sqlUpdate),
+             "UPDATE tasks SET done = 1 WHERE id = %s", id);
+    rc = sqlite3_exec(db, sqlUpdate, 0, 0, &err_msg);
+    if (rc != SQLITE_OK)
+    {
+        printf("SQL error: %s\n", err_msg);
+        sqlite3_free(err_msg);
+    }
+    else
+    {
+        printf("Task id:%s COMPLETED\n", id);
+        task_show(id, '!');
+    }
+    sqlite3_close(db);
+}
+
 
 void trim(char *str)
 {
@@ -315,7 +609,7 @@ void trim(char *str)
 
     // Shift trimmed string to the beginning
     memmove(str, start,
-            end - start + 2); // +1 for '\0', +1 for end-start indexing
+            end - start + 2);  // +1 for '\0', +1 for end-start indexing
 }
 
 bool isLeapYear(int year)
@@ -339,7 +633,35 @@ void run_args(char **args)
     }
     else if (strcmp(args[1], "-s") == 0)
     {
-        task_show(args[2]);
+        task_show(args[2], 's');
+    }
+    else if (strcmp(args[1], "-s!") == 0)
+    {
+        task_show(args[2], 'o');
+    }
+    else if (strcmp(args[1], "-c") == 0)
+    {
+        task_complete(args[2]);
+    }
+    else if (strcmp(args[1], "-t") == 0)
+    {
+        task_show(args[2], 't');
+    }
+    else if (strcmp(args[1], "-check") == 0)
+    {
+        task_show(args[1], 'r');
+    }
+    else if (strcmp(args[1], "-sa") == 0)
+    {
+        task_show(args[2], 'a');
+    }
+    else if (strcmp(args[1], "-p") == 0)
+    {
+        task_postpone(args[2], args[3]);
+    }
+    else if (strcmp(args[1], "-rm") == 0)
+    {
+        remove_task(args[2]);
     }
     else
         printf("INVALID args\n");
@@ -352,11 +674,12 @@ void set_time_date()
     currentDay = tm.tm_mday;
     currentMonth = tm.tm_mon + 1;
     currentYear = tm.tm_year + 1900;
+    currentHour = tm.tm_hour;
+    currentMin = tm.tm_min;
 }
 
 int main(int argc, char *args[])
 {
-
     if (!is_config())
     {
         set_config();
@@ -366,22 +689,22 @@ int main(int argc, char *args[])
         run_args(args);
 
     /*
-    sqlite3 *db;
-    char *err_msg = 0;
-    int rc = sqlite3_open("tasks.db", &db);
-    if (rc != SQLITE_OK)
-    {
-        printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
-        return 1;
-    }
+       sqlite3 *db;
+       char *err_msg = 0;
+       int rc = sqlite3_open("tasks.db", &db);
+       if (rc != SQLITE_OK)
+       {
+       printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
+       return 1;
+       }
 
     // 3. Insert data
-    const char *sql_insert = "INSERT INTO tasks(description, done) VALUES('Buy milk', 0);";
-    rc = sqlite3_exec(db, sql_insert, 0, 0, &err_msg);
-    if (rc != SQLITE_OK)
+    const char *sql_insert = "INSERT INTO tasks(description, done) VALUES('Buy
+    milk', 0);"; rc = sqlite3_exec(db, sql_insert, 0, 0, &err_msg); if (rc !=
+    SQLITE_OK)
     {
-        printf("SQL error: %s\n", err_msg);
-        sqlite3_free(err_msg);
+    printf("SQL error: %s\n", err_msg);
+    sqlite3_free(err_msg);
     }
 
     // 4. Read data
@@ -390,13 +713,13 @@ int main(int argc, char *args[])
     rc = sqlite3_prepare_v2(db, sql_select, -1, &res, 0);
     if (rc == SQLITE_OK)
     {
-        while (sqlite3_step(res) == SQLITE_ROW)
-        {
-            int id = sqlite3_column_int(res, 0);
-            const unsigned char *desc = sqlite3_column_text(res, 1);
-            int done = sqlite3_column_int(res, 2);
-            printf("Task %d: %s [%s]\n", id, desc, done ? "Done" : "Not done");
-        }
+    while (sqlite3_step(res) == SQLITE_ROW)
+    {
+    int id = sqlite3_column_int(res, 0);
+    const unsigned char *desc = sqlite3_column_text(res, 1);
+    int done = sqlite3_column_int(res, 2);
+    printf("Task %d: %s [%s]\n", id, desc, done ? "Done" : "Not done");
+    }
     }
     sqlite3_finalize(res);
 
