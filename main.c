@@ -39,7 +39,7 @@ void set_config()
     char *err_msg = 0;
 
     // 1. Open database (creates file if it doesn't exist)
-    int rc = sqlite3_open("tasks.db", &db);
+    int rc = sqlite3_open("task.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot create database: %s\n", sqlite3_errmsg(db));
@@ -143,7 +143,7 @@ void task_insert(char *input)
 {
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("tasks.db", &db);
+    int rc = sqlite3_open("task.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -212,7 +212,7 @@ void task_insert(char *input)
 void task_show(char *arg, char option)
 {
     sqlite3 *db;
-    int rc = sqlite3_open("tasks.db", &db);
+    int rc = sqlite3_open("task.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -409,7 +409,7 @@ void task_postpone(char *id, char *whenSt)
     set_time_date();
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("tasks.db", &db);
+    int rc = sqlite3_open("task.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -484,7 +484,7 @@ void remove_task(char *id)
 
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("tasks.db", &db);
+    int rc = sqlite3_open("task.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -510,7 +510,7 @@ void task_complete(char *id)
 {
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("tasks.db", &db);
+    int rc = sqlite3_open("task.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -531,6 +531,29 @@ void task_complete(char *id)
         printf("Task id:%s COMPLETED\n", id);
         task_show(id, '!');
     }
+    sqlite3_close(db);
+}
+
+void direct_sql(char *sql)
+{
+    sqlite3 *db;
+    char *err_msg = 0;
+    int rc = sqlite3_open("task.db", &db);
+    if (rc != SQLITE_OK)
+    {
+        printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
+        return;
+    }
+
+    rc = sqlite3_exec(db, sql, 0, 0, &err_msg);
+    if (rc != SQLITE_OK)
+    {
+        printf("SQL error: %s\n", err_msg);
+        sqlite3_free(err_msg);
+    }
+    else
+        printf("SQL executed successfully\n");
+
     sqlite3_close(db);
 }
 
@@ -630,6 +653,10 @@ void run_args(char **args)
     {
         remove_task(args[2]);
     }
+    else if (strcmp(args[1], "-sql") == 0)
+    {
+        direct_sql(args[2]);
+    }
     else
         printf("INVALID args\n");
 }
@@ -647,7 +674,7 @@ void set_time_date()
 
 int main(int argc, char *args[])
 {
-    if (access("tasks.db", F_OK) != 0)
+    if (access("task.db", F_OK) != 0)
     {
         printf("Cannot find database\nIf this is your first time, no worries. we'll create one :)\n");
         set_config();
@@ -656,42 +683,6 @@ int main(int argc, char *args[])
     if (args[0] != NULL)
         run_args(args);
 
-    /*
-       sqlite3 *db;
-       char *err_msg = 0;
-       int rc = sqlite3_open("tasks.db", &db);
-       if (rc != SQLITE_OK)
-       {
-       printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
-       return 1;
-       }
-
-    // 3. Insert data
-    const char *sql_insert = "INSERT INTO tasks(description, done) VALUES('Buy
-    milk', 0);"; rc = sqlite3_exec(db, sql_insert, 0, 0, &err_msg); if (rc !=
-    SQLITE_OK)
-    {
-    printf("SQL error: %s\n", err_msg);
-    sqlite3_free(err_msg);
-    }
-
-    // 4. Read data
-    const char *sql_select = "SELECT id, description, done FROM tasks;";
-    sqlite3_stmt *res;
-    rc = sqlite3_prepare_v2(db, sql_select, -1, &res, 0);
-    if (rc == SQLITE_OK)
-    {
-    while (sqlite3_step(res) == SQLITE_ROW)
-    {
-    int id = sqlite3_column_int(res, 0);
-    const unsigned char *desc = sqlite3_column_text(res, 1);
-    int done = sqlite3_column_int(res, 2);
-    printf("Task %d: %s [%s]\n", id, desc, done ? "Done" : "Not done");
-    }
-    }
-    sqlite3_finalize(res);
-
-    sqlite3_close(db);
-    */
     return 0;
 }
+
