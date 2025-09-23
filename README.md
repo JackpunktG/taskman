@@ -17,4 +17,6 @@ It stores the data in a simple SQlight database, making it easy to manage and qu
 - More advanced querying options
 
 
+## Installation
+Replace "tasks.db" with your desired database file path.
 
