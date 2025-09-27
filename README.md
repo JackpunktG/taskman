@@ -17,9 +17,9 @@ It stores the data in a simple SQlight database, making it easy to manage and qu
 
 With the command '-n "task | date"' you can add a task with a description and a date.
 Appointments can be added with the command '-n "appointment | date | time"' time must be formatted HH:MM.
-The date Syntax is very flexible, their is only one requriement that is putting either just the date of the day, and then it will defualt to current month and year, or you can put the full date in the format DD.MM.YYYY.
-You can also use daynames and today/tomorrow as keywords for the date, for example: "Meeting | thursday | 14:00" or "Task due | 12.5" 
-Using dayname will set the date to the next occurance of that day, so if today is wednesday, and you put "Dentist | Monday | 14:00" it will set the date to the following week, Monday.
+The date Syntax is very flexible, there is only one requriement; that is putting either just the date of the day, and then it will defualt to current month and year (you can put the full date in the format DD.MM.YYYY.) 
+Or you can also use daynames and today/tomorrow as keywords for the date, for example: "Meeting | thursday | 14:00" or "Task due | 12.5". 
+Using day names will set the date to the next occurance of that day, so if today is wednesday, and you put "Dentist | Monday | 14:00" it will set the date to the following week, Monday.
 
 
 #### Basic Commands
@@ -40,5 +40,4 @@ Using dayname will set the date to the next occurance of that day, so if today i
 
 
 ## Installation
-Replace "tasks.db" with your desired database file path.
-
+Replace "tasks.db" with your desired database file path. Make a Crontab job with the -check command to get notified of upcoming appointments. Then you're ready to go!
