@@ -16,10 +16,13 @@ int currentMonth;
 int currentYear;
 int currentHour;
 int currentMin;
+uint8_t dayInWeek;
 
 void trim(char *str);
 void set_time_date();
 void task_complete(char *id);
+int daysInMonth(int day, int month, int year);
+bool isLeapYear(int year);
 
 void set_config()
 {
@@ -39,7 +42,7 @@ void set_config()
     char *err_msg = 0;
 
     // 1. Open database (creates file if it doesn't exist)
-    int rc = sqlite3_open("task.db", &db);
+    int rc = sqlite3_open("tasks.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot create database: %s\n", sqlite3_errmsg(db));
@@ -65,10 +68,44 @@ void set_config()
     sqlite3_close(db);
 }
 
-char *find_date_from_day(char *day)
+void find_date_from_day(char *day)
 {
-    // STILL NEEDED
-    return NULL;
+    int adding = 0;
+    if (strcmp(day, "tom") == 0)
+        adding = 1;
+    else
+    {
+        const char *days[] = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"};
+        for (int i = dayInWeek; i <= 6 ; )
+        {
+            adding++;
+            if (strcmp(day, days[i]) == 0)
+                break;
+            if (i == 6)
+                i = 0;
+            else
+                i++;
+        }
+        adding--; //to not count today
+        if (adding == 0)
+            adding = 7; //next week
+    }
+    while (adding != 0)
+    {
+        currentDay++;
+        if (currentDay > daysInMonth(currentDay, currentMonth, currentYear))
+        {
+            currentDay = 1;
+            currentMonth++;
+            if (currentMonth > 12)
+            {
+                currentMonth = 1;
+                currentYear++;
+            }
+        }
+        adding--;
+    }
+
 }
 
 char *input_where(char *when)
@@ -77,21 +114,70 @@ char *input_where(char *when)
     if (!isdigit(when[0]))
     {
         if (strcmp(when, "mon") == 0 || strcmp(when, "monday") == 0)
-            return find_date_from_day("mon");
+        {
+            find_date_from_day("mon");
+
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     currentDay);
+            return result;
+        }
         else if (strcmp(when, "tue") == 0 || strcmp(when, "tuesday") == 0)
-            return find_date_from_day("tue");
+        {
+            find_date_from_day("tue");
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     currentDay);
+            return result;
+        }
         else if (strcmp(when, "wed") == 0 || strcmp(when, "wednesday") == 0)
-            return find_date_from_day("wed");
+        {
+            find_date_from_day("wed");
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     currentDay);
+            return result;
+        }
         else if (strcmp(when, "thu") == 0 || strcmp(when, "thursday") == 0)
-            return find_date_from_day("thu");
+        {
+            find_date_from_day("thu");
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     currentDay);
+            return result;
+        }
         else if (strcmp(when, "fri") == 0 || strcmp(when, "friday") == 0)
-            return find_date_from_day("fri");
+        {
+            find_date_from_day("fri");
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     currentDay);
+            return result;
+        }
         else if (strcmp(when, "sat") == 0 || strcmp(when, "saturday") == 0)
-            return find_date_from_day("sat");
+        {
+            find_date_from_day("sat");
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     currentDay);
+            return result;
+        }
         else if (strcmp(when, "sun") == 0 || strcmp(when, "sunday") == 0)
-            return find_date_from_day("sun");
+        {
+            find_date_from_day("sun");
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     currentDay);
+            return result;
+        }
         else if (strcmp(when, "tomorrow") == 0 || strcmp(when, "tom") == 0)
-            return find_date_from_day("tom");
+        {
+            find_date_from_day("tom");
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     currentDay);
+            return result;
+        }
+        else if (strcmp(when, "today") == 0 || strcmp(when, "tod") == 0)
+        {
+
+            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+                     currentDay);
+            return result;
+
+        }
         else
         {
             printf("ERROR when parsing due day with days\n");
@@ -143,7 +229,7 @@ void task_insert(char *input)
 {
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("task.db", &db);
+    int rc = sqlite3_open("tasks.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -152,15 +238,48 @@ void task_insert(char *input)
 
     set_time_date();
     char *token = strtok(input, "|");
+
+    //printf("[DEBUGGING] - Here 1\n");
     trim(token);
     char *task = malloc(strlen(token) + 1);
     strcpy(task, token);
 
+    //printf("[DEBUGGING] - Here 2\n");
     token = strtok(NULL, "|");
+    //printf("[DEBUGGING] - Here 3\n");
+    if (token == NULL)      //quick ways to add task for today
+    {
+        char *when = input_where("today");
+        char sqlInsert[2048];
+
+        snprintf(
+            sqlInsert, sizeof(sqlInsert),
+            "INSERT INTO tasks(date, task, date_added) VALUES(strftime('%%s', "
+            "'%s', 'start of day'), '%s', strftime('%%s', 'now'))",
+            when, task);
+
+        rc = sqlite3_exec(db, sqlInsert, 0, 0, &err_msg);
+        if (rc != SQLITE_OK)
+        {
+            printf("SQL error: %s\n", err_msg);
+            sqlite3_free(err_msg);
+        }
+        else
+            printf("Task: %s\nDate: %s\tADDED\n", task, when);
+
+        sqlite3_close(db);
+        free(task);
+        free(when);
+        return;
+    }
     trim(token);
+    //printf("[DEBUGGING] - Here 4\n");
     char *whenSt = malloc(strlen(token) + 1);
+
+    //printf("[DEBUGGING] - Here 5\n");
     strcpy(whenSt, token);
 
+    //printf("[DEBUGGING] - Here 6\n");
     token = strtok(NULL, "|");
     char *when = input_where(whenSt);
 
@@ -212,7 +331,7 @@ void task_insert(char *input)
 void task_show(char *arg, char option)
 {
     sqlite3 *db;
-    int rc = sqlite3_open("task.db", &db);
+    int rc = sqlite3_open("tasks.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -409,7 +528,7 @@ void task_postpone(char *id, char *whenSt)
     set_time_date();
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("task.db", &db);
+    int rc = sqlite3_open("tasks.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -484,7 +603,7 @@ void remove_task(char *id)
 
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("task.db", &db);
+    int rc = sqlite3_open("tasks.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -510,7 +629,7 @@ void task_complete(char *id)
 {
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("task.db", &db);
+    int rc = sqlite3_open("tasks.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -538,7 +657,7 @@ void direct_sql(char *sql)
 {
     sqlite3 *db;
     char *err_msg = 0;
-    int rc = sqlite3_open("task.db", &db);
+    int rc = sqlite3_open("tasks.db", &db);
     if (rc != SQLITE_OK)
     {
         printf("ERROR - Cannot open database: %s\n", sqlite3_errmsg(db));
@@ -670,11 +789,12 @@ void set_time_date()
     currentYear = tm.tm_year + 1900;
     currentHour = tm.tm_hour;
     currentMin = tm.tm_min;
+    dayInWeek = tm.tm_wday;
 }
 
 int main(int argc, char *args[])
 {
-    if (access("task.db", F_OK) != 0)
+    if (access("tasks.db", F_OK) != 0)
     {
         printf("Cannot find database\nIf this is your first time, no worries. we'll create one :)\n");
         set_config();
