@@ -84,8 +84,7 @@ int main(int argc, char *args[])
     }
     else
     {
-        printf("Usage: taskman [options]\n");
-        printf("Try 'taskman -s 0' to see today's tasks\n");
+        //PLACEHOLDER
     }
 
     return 0;
