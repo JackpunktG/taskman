@@ -1,6 +1,7 @@
 /.vscode
 out
-taskman
+taskmanTesting
 *.txt
 *.db
 .config
+*.o

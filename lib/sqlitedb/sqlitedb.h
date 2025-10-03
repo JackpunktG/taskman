@@ -2,7 +2,7 @@
 #define SQLITEDB_H
 
 #include <sqlite3.h>
-
+#include <stdint.h>
 typedef struct
 {
     sqlite3 *db;
@@ -33,7 +33,10 @@ char *sqlitedb_excute_stmt_result_as_string(SqliteDB *db_wrapper, sqlite3_stmt *
 // input - array of parameter values (as strings)
 // type - array of parameter types (1 = text, 2 = int)
 // sql - SQL query with '?' placeholders for parameters
-void db_stmt_build_execute(int n, char **input, int *type, const char *sql);
+void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const char *sql);
+// Single string result - 1 line per result '\n'. result with '|' delimited
+// Must be freed by caller
+char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_t *type, const char *sql);
 
 // Direct SQL execution (for debugging/admin)
 void direct_sql(char *dbPath, char *sql);
