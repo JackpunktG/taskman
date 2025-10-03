@@ -72,39 +72,6 @@ typedef struct
     size_t capacity;
 } QueryResult;
 
-/*
-int append_row(void *data, int argc, char **argv, char **col_names)
-{
-    QueryResult *buf = (QueryResult *)data;
-
-    for(int i = 0; i < argc; i++)
-    {
-        const char *val = argv[i] ? argv[i] : "NULL";
-        size_t len = strlen(val);
-
-        if (buf->capacity < buf->size + len + 2)
-        {
-            buf->capacity += 1024;
-            buf->result = realloc(buf->result, buf->capacity);
-        }
-
-        memcpy(buf->result + buf->size, val, len);
-        buf->size += len;
-        buf->result[buf->size++] = (i < argc) ? '|' : '\n';
-
-    }
-    return 0;
-}
-
-char *sqlitedb_as_string(SqliteDB *db_wrapper, const char *sql)
-{
-    QueryResult buf = { .result = malloc(1024), .size = 0, .capacity = 1024 };
-    buf.result[0] = '\0';
-    db_wrapper->last_rc = sqlite3_exec(db_wrapper->db, sql, append_row, &buf, &db_wrapper->err_msg);
-    buf.result[buf.size] = '\0';
-    return buf.result;
-}
-*/
 
 char *sqlitedb_excute_stmt_result_as_string(SqliteDB *db_wrapper, sqlite3_stmt *stmt)
 {
@@ -150,7 +117,7 @@ char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_
     SqliteDB *db = sqlitedb_open("tasks.db");
     if(!db || db->last_rc != SQLITE_OK)
     {
-        printf("ERROR: %s\n", db ? db->err_msg : "Failed to create pointer for db - Check Memory Allocation");
+        printf("ERROR: %s\n", db ? sqlite3_errmsg(db->db) : "Failed to create pointer for db - Check Memory Allocation");
         return 0;
     }
 
@@ -158,7 +125,7 @@ char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_
     int rc = sqlite3_prepare_v2(db->db, sql, -1, &stmt, NULL);
     if (rc != SQLITE_OK)
     {
-        printf("ERROR: %s\n", db->err_msg);
+        printf("ERROR: %s\n", sqlite3_errmsg(db->db));
         sqlitedb_close(db);
         return 0;
     }
@@ -179,42 +146,7 @@ char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_
                 printf("ERROR: Unknown type %d for parameter %d\n", type[i], i+1);
         }
     }
-    /*printf("===== DEBUG: SQL STATEMENT =====\n");
-    printf("SQL: %s\n", sql);
-    printf("Number of inputs: %u\n", n);
 
-    for (uint32_t i = 0; i < n; i++)
-    {
-        char *type_str;
-        switch(type[i])
-        {
-        case 1:
-            type_str = "TEXT";
-            break;
-        case 2:
-            type_str = "INT";
-            break;
-        case 3:
-            type_str = "";
-            break;
-        case 4:
-            type_str = "";
-            break;
-        case 5:
-            type_str = "";
-            break;
-        default:
-            type_str = "UNKNOWN";
-            break;
-        }
-
-        printf("Input %u: [%s] = %s\n",
-               i,
-               type_str,
-               input[i] ? input[i] : "NULL");
-    }
-    printf("===============================\n");
-    */
     result = sqlitedb_excute_stmt_result_as_string(db, stmt);
 
     sqlite3_finalize(stmt);
@@ -224,52 +156,17 @@ char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_
 
 void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const char *sql)
 {
-    printf("===== DEBUG: SQL STATEMENT =====\n");
-    printf("SQL: %s\n", sql);
-    printf("Number of inputs: %u\n", n);
-
-    for (uint32_t i = 0; i < n; i++)
-    {
-        char *type_str;
-        switch(type[i])
-        {
-        case 1:
-            type_str = "TEXT";
-            break;
-        case 2:
-            type_str = "INT";
-            break;
-        case 3:
-            type_str = "";
-            break;
-        case 4:
-            type_str = "";
-            break;
-        case 5:
-            type_str = "";
-            break;
-        default:
-            type_str = "UNKNOWN";
-            break;
-        }
-
-        printf("Input %u: [%s] = %s\n",
-               i,
-               type_str,
-               input[i] ? input[i] : "NULL");
-    }
-    printf("===============================\n");
-
 
     SqliteDB *db = sqlitedb_open("tasks.db");
     if(!db || db->last_rc != SQLITE_OK)
     {
-        printf("ERROR1: %s\n", db ? db->err_msg : "Failed to create pointer for db - Check Memory Allocation");
+        printf("ERROR1: %s\n", db ? sqlite3_errmsg(db->db) : "Failed to create pointer for db - Check Memory Allocation");
         return;
     }
 
     sqlite3_stmt *stmt;
     int rc = sqlite3_prepare_v2(db->db, sql, -1, &stmt, NULL);
+
     if (rc != SQLITE_OK)
     {
         printf("ERROR2: %s (SQLite error code: %d)\n",
@@ -298,7 +195,7 @@ void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const 
     rc = sqlitedb_execute_stmt(db, stmt);
     if (rc != SQLITE_OK)
     {
-        printf("ERROR3: %s\n", db->err_msg);
+        printf("ERROR3: %s\n", sqlite3_errmsg(db->db));
     }
     sqlite3_finalize(stmt);
     sqlitedb_close(db);
@@ -325,3 +222,40 @@ void direct_sql(char *dbPath, char *sql)
 
     sqlitedb_close(db);
 }
+/*printf("===== DEBUG: SQL STATEMENT =====\n");
+    printf("SQL: %s\n", sql);
+    printf("Number of inputs: %u\n", n);
+
+    for (uint32_t i = 0; i < n; i++)
+    {
+        char *type_str;
+        switch(type[i])
+        {
+        case 1:
+            type_str = "TEXT";
+            break;
+        case 2:
+            type_str = "INT";
+            break;
+        case 3:
+            type_str = "";
+            break;
+        case 4:
+            type_str = "";
+            break;
+        case 5:
+            type_str = "";
+            break;
+        default:
+            type_str = "UNKNOWN";
+            break;
+        }
+
+        printf("Input %u: [%s] = %s\n",
+               i,
+               type_str,
+               input[i] ? input[i] : "NULL");
+    }
+    printf("===============================\n");
+*/
+

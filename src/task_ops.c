@@ -244,13 +244,133 @@ int single_search_ID(char *arg, char **sqlQuery, char ***input, uint8_t **type)
     return 1;
 }
 
-void print_task(char *result)
+void process_line(char *task)
 {
-    char *line = NULL;
-    size_t len = 0;
-    while (getline)
+    char *buffer = strdup(task);
+    char taskID[8] = {0};
+    uint32_t hour;
+    uint32_t min;
+    char dateString[16] = {0};
+    char timeString[16] = {0};
+    char taskString[1024] = {0};
+    uint32_t inputDate;
+    bool completion;
+
+    uint32_t field = 1;
+    uint32_t letterCount = 0;
+
+    for(int i = 0; buffer[i] != '\0'; i++)
+    {
+        if (buffer[i] == '|')
+        {
+            if (field == 1)
+            {
+                memcpy(taskID, buffer, i);
+                task[i+1] = '\0';
+                letterCount = i + 1;
+                field++;
+            }
+            else if (field == 2)
+            {
+                memcpy(dateString, buffer + letterCount, i - letterCount);
+                dateString[i-letterCount + 1] = '\0';
+                letterCount = i + 1;
+                field++;
+            }
+            else if (field == 3)
+            {
+                memcpy(timeString, buffer + letterCount, i - letterCount);
+                timeString[i - letterCount + 1] = '\0';
+                letterCount = i + 1;
+                field++;
+            }
+            else if (field == 4)
+            {
+                memcpy(taskString, buffer + letterCount, i  - letterCount);
+                taskString[i - letterCount +1] = '\0';
+                letterCount = i + 1;
+                field++;
+            }
+            else if (field == 5)
+            {
+                //process dateadded
+                buffer[i+1] == '0' ? completion = false : true; //field 6
+
+            }
+
+        }
+
 
     }
+    printf("%s, %s, %s, %s, %s\n", taskID, dateString, timeString, taskString, completion ? "DONE" : "WORKING");
+
+    free(buffer);
+}
+/*
+void process_line(char *task)
+{
+    char *buffer = strdup(task);
+    uint32_t taskID;
+    uint32_t hour;
+    uint32_t min;
+    uint32_t date;
+    char taskString[1024];
+    uint32_t inputDate;
+    bool completion;
+
+    char *taskResult = strtok(buffer, "|");
+    taskID = atoi(taskResult);
+
+    taskResult = strtok(NULL, "|");
+    date = atoi(taskResult);
+
+    taskResult = strtok(NULL, "|");
+    if (strcmp(taskResult, "NULL") != 0)
+    {
+        hour = atoi(taskResult);
+        min = (hour % 3600) / 60;
+        hour = hour / 3600;
+    }
+
+    taskResult = strtok(NULL,"|");
+    strcpy(taskString, taskResult);
+
+    taskResult = strtok(NULL, "|");
+
+    taskResult[0] == '0' ? completion = false : true;
+
+    printf("%s, %s, %d, %d, %d\n", taskString, completion ? "DONE" : "WORKING", taskID, date, hour);
+
+    free(buffer);
+}
+*/
+void print_task(char *result)
+{
+    char *buffer = strdup(result);
+
+    char *line = strtok(buffer, "\n");
+
+    while (line != NULL)
+    {
+
+        process_line(line);
+
+
+
+        //printf("%s\n", line);
+        line = strtok(NULL, "\n");
+    }
+
+    free(buffer);
+
+}
+
+
+void pop_up(char *result)
+{
+
+    //DO TO
+}
 
 void task_show(char *arg, char option)
 {
@@ -295,7 +415,11 @@ void task_show(char *arg, char option)
 
     char *result = db_stmt_build_execute_string_return(n, input, type, sqlQuery);
 
-    // printf("%s", result);
+    printf("%s", result);
+
+
+    print_task(result);
+
     if (n > 1)
     {
         for(int i = 0; i < n; i++)
@@ -303,11 +427,10 @@ void task_show(char *arg, char option)
             free((input)[i]);
         }
     }
+
     free(input);
     free(type);
     free(sqlQuery);
-
-    option[0] == 'r' ? pop_up(result) : print_task(result);
 
     free(result);
 
