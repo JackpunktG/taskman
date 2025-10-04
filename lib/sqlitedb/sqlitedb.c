@@ -3,7 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
-
+#include <time.h>
+#include <stdbool.h>
 
 SqliteDB *sqlitedb_open(const char *filename)
 {
@@ -199,6 +200,114 @@ void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const 
     }
     sqlite3_finalize(stmt);
     sqlitedb_close(db);
+}
+
+bool time_check(char *input)
+{
+    uint8_t hourDigit1 = input[0] - '0';
+    uint8_t hourDigit2 = input[1] - '0';
+    uint8_t minDigit1 = input[3] - '0';
+
+    if (hourDigit1 > 2) return false;
+    if (hourDigit1 == 2)
+        if (hourDigit2 > 3) return false;
+
+    if (minDigit1 > 6) return false;
+
+    return true;
+
+
+}
+
+int time_input_helper(char *input)
+{
+    uint32_t length = strlen(input);
+    bool doublePoint = false;
+
+    for (int i = 0; i < length; i++)
+    {
+        if (input[i] == ':') doublePoint = true;
+    }
+
+    if (doublePoint)
+    {
+        if (length == 4 && input[1] == ':')
+        {
+            char fixedTime[6] = {0};
+            fixedTime[0] = '0';
+            fixedTime[1] = input[0];
+            fixedTime[2] = input[1];
+            fixedTime[3] = input[2];
+            fixedTime[4] = input[3];
+            fixedTime[5] = '\0';
+            input = realloc(input, 6);
+            strcpy(input, fixedTime);
+            return time_check(input) ? 1 : -1;
+        }
+        else if (length == 5 && input[2] == ':')
+            return time_check(input) ? 1 : -1;
+        else
+            return -1;
+    }
+    else
+    {
+        if (length == 1)
+        {
+            char fixedTime[6] = {0};
+            fixedTime[0] = '0';
+            fixedTime[1] = input[0];
+            fixedTime[2] = ':';
+            fixedTime[3] = '0';
+            fixedTime[4] = '0';
+            fixedTime[5] = '\0';
+            input = realloc(input, 6);
+            strcpy(input, fixedTime);
+            return time_check(input) ? 1 : -1;
+        }
+        else if (length == 2)
+        {
+            char fixedTime[6] = {0};
+            fixedTime[0] = input[0];
+            fixedTime[1] = input[1];
+            fixedTime[2] = ':';
+            fixedTime[3] = '0';
+            fixedTime[4] = '0';
+            fixedTime[5] = '\0';
+            input = realloc(input, 6);
+            strcpy(input, fixedTime);
+            return time_check(input) ? 1 : -1;
+        }
+        else
+            return -1;
+    }
+}
+
+
+char *time_string_from_timestamp(uint32_t timestamp)
+{
+    time_t ts = (time_t)timestamp;
+    struct tm *tm_info = localtime(&ts);
+    static char buffer[9];
+    strftime(buffer, sizeof(buffer), "%H:%M:%S", tm_info);
+    return buffer;
+}
+
+char *date_string_from_timestamp(uint32_t timestamp)
+{
+    time_t ts = (time_t)timestamp;
+    struct tm *tm_info = localtime(&ts);
+    static char buffer[11];
+    strftime(buffer, sizeof(buffer), "%d.%m.%Y", tm_info);
+    return buffer;
+}
+
+char *date_and_time_string_from_timestamp(uint32_t timestamp)
+{
+    time_t ts = (time_t)timestamp;
+    struct tm *tm_info = localtime(&ts);
+    static char buffer[20];
+    strftime(buffer, sizeof(buffer), "%d.%m.%Y %H:%M:%S", tm_info);
+    return buffer;
 }
 
 

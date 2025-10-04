@@ -20,7 +20,6 @@ void sqlitedb_close(SqliteDB *db_wrapper);
 // Execute a preprapared *stmt SQL statement without results
 int sqlitedb_execute_stmt(SqliteDB *db_wrapper, sqlite3_stmt *stmt);
 
-
 // Get error message
 const char *sqlitedb_error(SqliteDB *db);
 
@@ -41,4 +40,12 @@ char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_
 // Direct SQL execution (for debugging/admin)
 void direct_sql(char *dbPath, char *sql);
 
+// Utility functions to convert timestamps to date/time strings
+char *time_string_from_timestamp(uint32_t timestamp);
+char *date_string_from_timestamp(uint32_t timestamp);
+char *date_and_time_string_from_timestamp(uint32_t timestamp);
+
+// helper function for configuring input to HH:MM
+// then checks to see if vaild time string. returns 1 for all good or -1 for invalid
+int time_input_helper(char *input);
 #endif

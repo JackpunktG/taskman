@@ -27,7 +27,7 @@ int range_search(char *arg, int currentDay, char **sqlQuery, char ***input, uint
     t.tm_mday += 1 + range;                  // to get to whole day
     time_t timestamp1 = mktime(&t);  // to get the whole day
 
-    *sqlQuery = strdup("SELECT * FROM tasks WHERE date >= ? AND date < ?");
+    *sqlQuery = strdup("SELECT * FROM tasks WHERE date >= ? AND date < ? ORDER BY date, time");
 
     *input = malloc(2 * sizeof(char *));
     if (*input == NULL)
@@ -80,7 +80,7 @@ int day_search(char *arg, char **sqlQuery, char ***input, uint8_t **type)
     time_t timestamp1 = mktime(&t);  // to get the whole day
 
 
-    *sqlQuery = strdup("SELECT * FROM tasks WHERE date >= ? AND date < ?");
+    *sqlQuery = strdup("SELECT * FROM tasks WHERE date >= ? AND date < ? ORDER BY time");
 
     *input = malloc(2 * sizeof(char *));
     if (*input == NULL)
@@ -131,7 +131,7 @@ int appointment_search(char *arg, char **sqlQuery, char ***input, uint8_t **type
     time_t timestamp1 = mktime(&t);  // to get the whole day
 
 
-    *sqlQuery = strdup("SELECT * FROM tasks WHERE date >= ? AND date < ? AND time NOT NULL");
+    *sqlQuery = strdup("SELECT * FROM tasks WHERE date >= ? AND date < ? AND time NOT NULL ORDER BY time");
 
     *input = malloc(2 * sizeof(char *));
     if (*input == NULL)
@@ -248,12 +248,9 @@ void process_line(char *task)
 {
     char *buffer = strdup(task);
     char taskID[8] = {0};
-    uint32_t hour;
-    uint32_t min;
     char dateString[16] = {0};
     char timeString[16] = {0};
     char taskString[1024] = {0};
-    uint32_t inputDate;
     bool completion;
 
     uint32_t field = 1;
@@ -297,13 +294,22 @@ void process_line(char *task)
                 buffer[i+1] == '0' ? completion = false : true; //field 6
 
             }
-
         }
-
-
     }
-    printf("%s, %s, %s, %s, %s\n", taskID, dateString, timeString, taskString, completion ? "DONE" : "WORKING");
+    char *date;
+    date = date_string_from_timestamp(atoi(dateString));
 
+    if (strcmp(timeString, "NULL") == 0)
+        printf("%.5s -> %s [%s] id:%s\n", date, taskString, completion ? "DONE" : "WORKING", taskID);
+    else
+    {
+        uint32_t hour;
+        uint32_t min;
+        hour = atoi(timeString);
+        min = (hour % 3600) / 60;
+        hour = hour / 3600;
+        printf("%.5s %d:%02d -> %s [%s] id:%s\n", date, hour, min, taskString, completion ? "DONE" : "APPOINTMENT", taskID);
+    }
     free(buffer);
 }
 /*
@@ -352,12 +358,7 @@ void print_task(char *result)
 
     while (line != NULL)
     {
-
         process_line(line);
-
-
-
-        //printf("%s\n", line);
         line = strtok(NULL, "\n");
     }
 
@@ -406,7 +407,7 @@ void task_show(char *arg, char option)
         break;
     case '.':
         n = 0;
-        sqlQuery = strdup("SELECT * FROM tasks"); //prints entire table
+        sqlQuery = strdup("SELECT * FROM tasks ORDER BY date"); //prints entire table
         break;
     default:
         printf("ERROR - could not find options for task_show");
@@ -416,8 +417,6 @@ void task_show(char *arg, char option)
     char *result = db_stmt_build_execute_string_return(n, input, type, sqlQuery);
 
     printf("%s", result);
-
-
     print_task(result);
 
     if (n > 1)
@@ -438,6 +437,7 @@ void task_show(char *arg, char option)
 
 void task_insert(char *dateAndTimeArg)
 {
+    bool added;
     set_time_date();
     char *token = strtok(dateAndTimeArg, "|");
 
@@ -474,14 +474,28 @@ void task_insert(char *dateAndTimeArg)
     {
         trim(token);
         char *timeString = malloc(strlen(token) + 1);
-        strcpy(timeString, token);
-        char *sqlQuery = "INSERT INTO tasks(date, time, task, date_added) "
-                         "VALUES(strftime('%s', ?, 'start of day'), strftime('%s', "
-                         "?, ?) % 86400, ?, strftime('%s', 'now'))";
 
-        const char *input[] = { dateString, dateString, timeString, taskString };
-        uint8_t type[] = { 1, 1, 1, 1 };
-        db_stmt_build_execute(4, input, type, sqlQuery);
+        strcpy(timeString, token);
+        int check = time_input_helper(timeString);
+
+        if (check == 1)
+        {
+            printf("Time: %s\n", timeString);
+            char *sqlQuery = "INSERT INTO tasks(date, time, task, date_added) "
+                             "VALUES(strftime('%s', ?, 'start of day'), strftime('%s', "
+                             "?, ?) % 86400, ?, strftime('%s', 'now'))";
+
+            const char *input[] = { dateString, dateString, timeString, taskString };
+            uint8_t type[] = { 1, 1, 1, 1 };
+            db_stmt_build_execute(4, input, type, sqlQuery);
+            added = true;
+        }
+        else
+        {
+            printf("ERROR - Invalid time input\n");
+            added = false;
+        }
+
         free(timeString);
     }
     else
@@ -492,9 +506,10 @@ void task_insert(char *dateAndTimeArg)
         const char *input[] = { dateString, taskString };
         uint8_t type[] = { 1, 1 };
         db_stmt_build_execute(2, input, type, sqlQuery);
+        added = true;
     }
     // task_show(id, '!');
-    printf("ADDED\n");
+    added ? printf("ADDED\n") : printf("");
     free(temp);
     free(dateString);
     free(taskString);
