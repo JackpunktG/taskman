@@ -3,6 +3,8 @@
 
 // Task operations
 void task_insert(char *input);
+void recurrring_task_insert(char *taskArgs);
+void recurrring_task_show(char *arg, char option);
 void task_show(char *arg, char option);
 void task_complete(char *id);
 void task_postpone(char *id, char *whenSt);

@@ -12,17 +12,29 @@ void run_args(char **args)
     {
         task_insert(args[2]);
     }
+    else if (strcmp(args[1], "-nr") == 0)
+    {
+        recurrring_task_insert(args[2]);
+    }
+    else if (strcmp(args[1], "-sr") == 0)
+    {
+        recurrring_task_show(NULL, '.');
+    }
     else if (strcmp(args[1], "-s") == 0)
     {
         task_show(args[2], 's');
     }
     else if(strcmp(args[1], "today") == 0)
     {
-        task_show("0", 's');
+        task_show("0", 't');
     }
     else if(strcmp(args[1], "tomorrow") == 0 || strcmp(args[1], "tom") == 0)
     {
-        task_show("1", 's');
+        task_show("1", 't');
+    }
+    else if(strcmp(args[1], "task") == 0)
+    {
+        task_show(NULL, 't');
     }
     else if(strcmp(args[1], "week") == 0)
     {
@@ -46,11 +58,11 @@ void run_args(char **args)
     }
     else if (strcmp(args[1], "-check") == 0)
     {
-        task_show("", 'r');
+        task_show(NULL, 'r');
     }
     else if (strcmp(args[1], "-sa") == 0)
     {
-        task_show("", '.');
+        task_show(NULL, '.');
     }
     else if (strcmp(args[1], "-p") == 0)
     {
@@ -84,7 +96,8 @@ int main(int argc, char *args[])
     }
     else
     {
-        //PLACEHOLDER
+        printf("No args provided\n");
+        printf("Use -h or --help for help\n");
     }
 
     return 0;

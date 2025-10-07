@@ -93,7 +93,8 @@ char *sqlitedb_excute_stmt_result_as_string(SqliteDB *db_wrapper, sqlite3_stmt *
             }
             memcpy(buf.result + buf.size, val, len);
             buf.size += len;
-            buf.result[buf.size++] = (i < cols - 1) ? '|' : '\n';
+            buf.result[buf.size++] = '|'; //buf.result[buf.size++]if (i < cols - 1) ? '|' : '\n';
+            if (i == cols - 1) buf.result[buf.size++] = '\n';
         }
     }
     buf.result[buf.size] = '\0';
@@ -111,11 +112,11 @@ int console_print(void *data, int argc, char **argv, char **col_names)
     return 0;
 }
 
-char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_t *type, const char *sql)
+char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_t *type, const char *sql, const char *dbPath)
 {
     char *result = NULL;
 
-    SqliteDB *db = sqlitedb_open("tasks.db");
+    SqliteDB *db = sqlitedb_open(dbPath);
     if(!db || db->last_rc != SQLITE_OK)
     {
         printf("ERROR: %s\n", db ? sqlite3_errmsg(db->db) : "Failed to create pointer for db - Check Memory Allocation");
@@ -155,10 +156,10 @@ char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_
     return result;
 }
 
-void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const char *sql)
+void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const char *sql, const char *dbPath)
 {
 
-    SqliteDB *db = sqlitedb_open("tasks.db");
+    SqliteDB *db = sqlitedb_open(dbPath);
     if(!db || db->last_rc != SQLITE_OK)
     {
         printf("ERROR1: %s\n", db ? sqlite3_errmsg(db->db) : "Failed to create pointer for db - Check Memory Allocation");
@@ -212,40 +213,40 @@ bool time_check(char *input)
     if (hourDigit1 == 2)
         if (hourDigit2 > 3) return false;
 
-    if (minDigit1 > 6) return false;
+    if (minDigit1 > 5) return false;
 
     return true;
-
-
 }
 
-int time_input_helper(char *input)
+int time_input_helper(char **input)
 {
-    uint32_t length = strlen(input);
+    uint32_t length = strlen(*input);
     bool doublePoint = false;
 
     for (int i = 0; i < length; i++)
     {
-        if (input[i] == ':') doublePoint = true;
+        if ((*input)[i] == ':') doublePoint = true;
     }
 
     if (doublePoint)
     {
-        if (length == 4 && input[1] == ':')
+        if (length == 4 && (*input)[1] == ':')
         {
             char fixedTime[6] = {0};
             fixedTime[0] = '0';
-            fixedTime[1] = input[0];
-            fixedTime[2] = input[1];
-            fixedTime[3] = input[2];
-            fixedTime[4] = input[3];
+            fixedTime[1] = (*input)[0];
+            fixedTime[2] = (*input)[1];
+            fixedTime[3] = (*input)[2];
+            fixedTime[4] = (*input)[3];
             fixedTime[5] = '\0';
-            input = realloc(input, 6);
-            strcpy(input, fixedTime);
-            return time_check(input) ? 1 : -1;
+
+            *input = realloc(*input, 6);
+            if (*input == NULL) return -1;
+            strcpy(*input, fixedTime);
+            return time_check(*input) ? 1 : -1;
         }
-        else if (length == 5 && input[2] == ':')
-            return time_check(input) ? 1 : -1;
+        else if (length == 5 && (*input)[2] == ':')
+            return time_check(*input) ? 1 : -1;
         else
             return -1;
     }
@@ -255,33 +256,36 @@ int time_input_helper(char *input)
         {
             char fixedTime[6] = {0};
             fixedTime[0] = '0';
-            fixedTime[1] = input[0];
+            fixedTime[1] = (*input)[0];
             fixedTime[2] = ':';
             fixedTime[3] = '0';
             fixedTime[4] = '0';
             fixedTime[5] = '\0';
-            input = realloc(input, 6);
-            strcpy(input, fixedTime);
-            return time_check(input) ? 1 : -1;
+
+            *input = realloc(*input, 6);
+            if (*input == NULL) return -1;
+            strcpy(*input, fixedTime);
+            return time_check(*input) ? 1 : -1;
         }
         else if (length == 2)
         {
             char fixedTime[6] = {0};
-            fixedTime[0] = input[0];
-            fixedTime[1] = input[1];
+            fixedTime[0] = (*input)[0];
+            fixedTime[1] = (*input)[1];
             fixedTime[2] = ':';
             fixedTime[3] = '0';
             fixedTime[4] = '0';
             fixedTime[5] = '\0';
-            input = realloc(input, 6);
-            strcpy(input, fixedTime);
-            return time_check(input) ? 1 : -1;
+
+            *input = realloc(*input, 6);
+            if (*input == NULL) return -1;
+            strcpy(*input, fixedTime);
+            return time_check(*input) ? 1 : -1;
         }
         else
             return -1;
     }
 }
-
 
 char *time_string_from_timestamp(uint32_t timestamp)
 {

@@ -39,7 +39,7 @@ int daysInMonth(int day, int month, int year)
 {
     static const int days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     if (month == 2)
-        return isLeapYear(tm.tm_year + 1900) ? 29 : 28;
+        return isLeapYear(year) ? 29 : 28;
     return days[month - 1];
 }
 
@@ -83,80 +83,101 @@ void find_date_from_day(char *day)
 
 }
 
-char *input_where(char *when)
+bool date_validate(char *date)
 {
-    char *result = malloc(sizeof(char) * 12);
+    uint16_t year;
+    uint8_t month;
+    uint8_t day;
+
+    sscanf(date, "%hu-%hhu-%hhu", &year, &month, &day);
+
+    if (year < 2025) return false;
+    if (month > 12) return false;
+    if (day > daysInMonth(day, month, year)) return false;
+
+    return true;
+}
+
+int input_where(char *when, char **result)
+{
+    trim(when);
+    if (when[0] == '-')
+    {
+        return 2;
+    }
+
+    *result = malloc(sizeof(char) * 12);
+
     if (!isdigit(when[0]))
     {
         if (strcmp(when, "mon") == 0 || strcmp(when, "monday") == 0)
         {
             find_date_from_day("mon");
 
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
-            return result;
+            return 1;
         }
         else if (strcmp(when, "tue") == 0 || strcmp(when, "tuesday") == 0)
         {
             find_date_from_day("tue");
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
-            return result;
+            return 1;
         }
         else if (strcmp(when, "wed") == 0 || strcmp(when, "wednesday") == 0)
         {
             find_date_from_day("wed");
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
-            return result;
+            return 1;
         }
-        else if (strcmp(when, "thu") == 0 || strcmp(when, "thursday") == 0)
+        else if (strcmp(when, "thu") == 0 || strcmp(when, "thur") == 0 || strcmp(when, "thursday") == 0)
         {
             find_date_from_day("thu");
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
-            return result;
+            return 1;
         }
         else if (strcmp(when, "fri") == 0 || strcmp(when, "friday") == 0)
         {
             find_date_from_day("fri");
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
-            return result;
+            return 1;
         }
         else if (strcmp(when, "sat") == 0 || strcmp(when, "saturday") == 0)
         {
             find_date_from_day("sat");
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
-            return result;
+            return 1;
         }
         else if (strcmp(when, "sun") == 0 || strcmp(when, "sunday") == 0)
         {
             find_date_from_day("sun");
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
-            return result;
+            return 1;
         }
         else if (strcmp(when, "tomorrow") == 0 || strcmp(when, "tom") == 0)
         {
             find_date_from_day("tom");
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
-            return result;
+            return 1;
         }
         else if (strcmp(when, "today") == 0 || strcmp(when, "tod") == 0)
         {
 
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
-            return result;
+            return 1;
 
         }
         else
         {
-            printf("ERROR when parsing due day with days\n");
-            return 0;
+            return -1;
         }
     }
     else
@@ -164,7 +185,7 @@ char *input_where(char *when)
         char *token = strtok(when, ".");
         if (!token)
         {
-            printf("ERROR when parsing due day with date");
+            return -1;
         }
         trim(token);
         int day = atoi(token);
@@ -176,27 +197,32 @@ char *input_where(char *when)
         {
             trim(token);
             month = atoi(token);
+
+            token = strtok(NULL, ".");
+            if (token)
+            {
+                trim(token);
+                year = atoi(token);
+                snprintf(*result, 12, "%04d-%02d-%02d", year, month, day);
+            }
+            else
+            {
+                snprintf(*result, 12, "%04d-%02d-%02d", currentYear, month, day);
+            }
         }
         else
         {
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
+            snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      day);
-            return result;
         }
 
-        token = strtok(NULL, ".");
-        if (token)
+        if (!date_validate(*result))
         {
-            trim(token);
-            year = atoi(token);
-            snprintf(result, 12, "%04d-%02d-%02d", year, month, day);
-            return result;
+            return -2;
         }
-        else
-        {
-            snprintf(result, 12, "%04d-%02d-%02d", currentYear, month, day);
-            return result;
-        }
+        else return 1;
+
+
     }
 }
 
