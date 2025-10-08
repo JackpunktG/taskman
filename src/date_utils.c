@@ -43,6 +43,63 @@ int daysInMonth(int day, int month, int year)
     return days[month - 1];
 }
 
+char *date_calculator_from_range(uint32_t range)
+{
+    char *dateString = malloc(11 * sizeof(char));
+
+    while (range != 0)
+    {
+        currentDay++;
+        if (currentDay > daysInMonth(currentDay, currentMonth, currentYear))
+        {
+            currentDay = 1;
+            currentMonth++;
+            if (currentMonth > 12)
+            {
+                currentMonth = 1;
+                currentYear++;
+            }
+        }
+        range--;
+    }
+
+    snprintf(dateString, 11, "%02d-%02d-%04d", currentDay, currentMonth, currentYear);
+    return dateString;
+}
+
+void print_week_and_day(char *dateString)
+{
+    const char *days[] = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"};
+    char daySt[3];
+    char monSt[3];
+    char yearSt[5];
+
+    char weekStr[3];
+
+    memcpy(daySt, dateString, 2);
+    daySt[2] = '\0';
+    memcpy(monSt, dateString + 3, 2);
+    monSt[2] = '\0';
+    memcpy(yearSt, dateString + 6, 4);
+    yearSt[4] = '\0';
+
+    uint8_t day = atoi(daySt);
+    uint8_t mon = atoi(monSt);
+    uint16_t year = atoi(yearSt);
+
+    struct tm tm = {0};
+    tm.tm_year = year - 1900;
+    tm.tm_mon = mon - 1;
+    tm.tm_mday = day;
+    mktime(&tm);
+    strftime(weekStr, sizeof(weekStr), "%U", &tm);
+
+    tm.tm_mday == 0 ? printf("\n---- week %s ----\n\n", weekStr) : printf("");
+
+    printf("%s\n", days[tm.tm_mday]);
+}
+
+
 void find_date_from_day(char *day)
 {
     int adding = 0;
@@ -182,7 +239,16 @@ int input_where(char *when, char **result)
     }
     else
     {
-        char *token = strtok(when, ".");
+        char delimiter[2] = {0}; //allowing any date syntax to be processed
+        int i = 0;
+        while (isdigit(when[i]) && when[i] != '\0')
+        {
+            i++;
+        }
+        if (when[i] != '\0') delimiter[0] = when[i];
+        else delimiter[0] = '.';
+
+        char *token = strtok(when, delimiter);
         if (!token)
         {
             return -1;
@@ -192,13 +258,13 @@ int input_where(char *when, char **result)
         int month;
         int year;
 
-        token = strtok(NULL, ".");
+        token = strtok(NULL, delimiter);
         if (token)
         {
             trim(token);
             month = atoi(token);
 
-            token = strtok(NULL, ".");
+            token = strtok(NULL, delimiter);
             if (token)
             {
                 trim(token);
@@ -221,9 +287,92 @@ int input_where(char *when, char **result)
             return -2;
         }
         else return 1;
-
-
     }
 }
+
+bool time_check(char *input)
+{
+    uint8_t hourDigit1 = input[0] - '0';
+    uint8_t hourDigit2 = input[1] - '0';
+    uint8_t minDigit1 = input[3] - '0';
+
+    if (hourDigit1 > 2) return false;
+    if (hourDigit1 == 2)
+        if (hourDigit2 > 3) return false;
+
+    if (minDigit1 > 5) return false;
+
+    return true;
+}
+
+int time_input_helper(char **input)
+{
+    uint32_t length = strlen(*input);
+    bool doublePoint = false;
+
+    for (int i = 0; i < length; i++)
+    {
+        if ((*input)[i] == ':') doublePoint = true;
+    }
+
+    if (doublePoint)
+    {
+        if (length == 4 && (*input)[1] == ':')
+        {
+            char fixedTime[6] = {0};
+            fixedTime[0] = '0';
+            fixedTime[1] = (*input)[0];
+            fixedTime[2] = (*input)[1];
+            fixedTime[3] = (*input)[2];
+            fixedTime[4] = (*input)[3];
+            fixedTime[5] = '\0';
+
+            *input = realloc(*input, 6);
+            if (*input == NULL) return -1;
+            strcpy(*input, fixedTime);
+            return time_check(*input) ? 1 : -1;
+        }
+        else if (length == 5 && (*input)[2] == ':')
+            return time_check(*input) ? 1 : -1;
+        else
+            return -1;
+    }
+    else
+    {
+        if (length == 1)
+        {
+            char fixedTime[6] = {0};
+            fixedTime[0] = '0';
+            fixedTime[1] = (*input)[0];
+            fixedTime[2] = ':';
+            fixedTime[3] = '0';
+            fixedTime[4] = '0';
+            fixedTime[5] = '\0';
+
+            *input = realloc(*input, 6);
+            if (*input == NULL) return -1;
+            strcpy(*input, fixedTime);
+            return time_check(*input) ? 1 : -1;
+        }
+        else if (length == 2)
+        {
+            char fixedTime[6] = {0};
+            fixedTime[0] = (*input)[0];
+            fixedTime[1] = (*input)[1];
+            fixedTime[2] = ':';
+            fixedTime[3] = '0';
+            fixedTime[4] = '0';
+            fixedTime[5] = '\0';
+
+            *input = realloc(*input, 6);
+            if (*input == NULL) return -1;
+            strcpy(*input, fixedTime);
+            return time_check(*input) ? 1 : -1;
+        }
+        else
+            return -1;
+    }
+}
+
 
 

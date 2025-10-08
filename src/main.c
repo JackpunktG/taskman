@@ -8,37 +8,16 @@
 
 void run_args(char **args)
 {
+    //******************************************************************************
+    //task Args
+    //******************************************************************************
     if (strcmp(args[1], "-n") == 0)
     {
         task_insert(args[2]);
     }
-    else if (strcmp(args[1], "-nr") == 0)
-    {
-        recurrring_task_insert(args[2]);
-    }
-    else if (strcmp(args[1], "-sr") == 0)
-    {
-        recurrring_task_show(NULL, '.');
-    }
     else if (strcmp(args[1], "-s") == 0)
     {
         task_show(args[2], 's');
-    }
-    else if(strcmp(args[1], "today") == 0)
-    {
-        task_show("0", 't');
-    }
-    else if(strcmp(args[1], "tomorrow") == 0 || strcmp(args[1], "tom") == 0)
-    {
-        task_show("1", 't');
-    }
-    else if(strcmp(args[1], "task") == 0)
-    {
-        task_show(NULL, 't');
-    }
-    else if(strcmp(args[1], "week") == 0)
-    {
-        task_show("7", 's');
     }
     else if(strcmp(args[1], "-id") == 0)
     {
@@ -56,10 +35,6 @@ void run_args(char **args)
     {
         task_show(args[2], 'a');
     }
-    else if (strcmp(args[1], "-check") == 0)
-    {
-        task_show(NULL, 'r');
-    }
     else if (strcmp(args[1], "-sa") == 0)
     {
         task_show(NULL, '.');
@@ -72,6 +47,64 @@ void run_args(char **args)
     {
         remove_task(args[2]);
     }
+    else if(strcmp(args[1], "task") == 0)
+    {
+        task_show(NULL, 't');
+    }
+    //******************************************************************************
+    //recurring task Args
+    //******************************************************************************
+    else if (strcmp(args[1], "-nr") == 0)
+    {
+        if (args[2] == NULL) recurring_task_input_guide();
+        else recurring_task_insert(args[2]);
+    }
+    else if(strcmp(args[1], "-sr!") == 0)
+    {
+        recurring_task_show(args[2], 'o');
+    }
+    else if(strcmp(args[1], "-idr") == 0)
+    {
+        recurring_task_show(args[2], '!');
+    }
+    else if (strcmp(args[1], "-sra") == 0)
+    {
+        recurring_task_show(NULL, '.');
+    }
+    //******************************************************************************
+    //Combination and outlook Args
+    //******************************************************************************
+    else if(strcmp(args[1], "today") == 0)
+    {
+        task_outlook('!');
+    }
+    else if(strcmp(args[1], "tomorrow") == 0 || strcmp(args[1], "tom") == 0)
+    {
+        task_outlook('t');
+    }
+    else if(strcmp(args[1], "week") == 0)
+    {
+        task_outlook('w');
+    }
+    else if(strcmp(args[1], "fort") == 0 || strcmp(args[1], "fortnightly") == 0)
+    {
+        task_outlook('f');
+    }
+    else if(strcmp(args[1], "month") == 0)
+    {
+        task_outlook('m');
+    }
+    else if(strcmp(args[1], "quarterly") == 0 || strcmp(args[1], "quart") == 0)
+    {
+        task_outlook('q');
+    }
+    else if (strcmp(args[1], "-check") == 0)
+    {
+        task_show(NULL, 'r');
+    }
+    //******************************************************************************
+    //misc. Args
+    //******************************************************************************
     else if (strcmp(args[1], "-sql") == 0)
     {
         direct_sql("tasks.db", args[2]);

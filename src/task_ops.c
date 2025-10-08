@@ -317,8 +317,11 @@ char *process_line(char *task, char *id)
             }
             else if (field == 5)
             {
-                //field 5 is date added - currently not used
-                completion = (buffer[i+1] == '0' ) ? false : true; //field 6
+                field++;
+            }
+            else if (field == 6)
+            {
+                completion = (buffer[i-1] == '0' ) ? false : true; //field 6
 
             }
         }
@@ -460,7 +463,7 @@ void task_show(char *arg, char option)
         break;
     case 't':
         n = 0;
-        sqlQuery = strdup("SELECT * FROM tasks WHERE date IS NULL");
+        sqlQuery = strdup("SELECT * FROM tasks WHERE date IS NULL AND done = 0");
         break;
     case '.':
         n = 0;
@@ -696,7 +699,147 @@ void remove_task(char *id)
 //recurring tasks
 //************************************************************************************
 
-char *validate_recurring_task(char *line, char option, bool *valid, char *id)
+
+int recurring_day_search(char *dateString, char **sqlQuery, char ***input, uint8_t **type)
+{
+    *sqlQuery = strdup("SELECT * FROM recurring_tasks WHERE date_begin <= ? AND (date_expires >= ? OR date_expires IS NULL) ORDER BY time");
+
+    *input = malloc(2 * sizeof(char *));
+    if (*input == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+
+    (*input)[0] = strdup(dateString);
+    (*input)[1] = strdup(dateString);
+
+    *type = malloc(sizeof(uint8_t));
+    if (*type == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+
+    (*type)[0] = 1;
+    (*type)[1] = 1;
+
+    return 2;
+}
+
+int recurring_single_search_ID(char *id, char **sqlQuery, char ***input, uint8_t **type)
+{
+    *sqlQuery = strdup("SELECT * FROM recurring_tasks WHERE id = ?");
+
+    *input = malloc(sizeof(char *));
+    if (*input == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+    (*input)[0] = id;
+
+    *type = malloc(sizeof(uint8_t));
+    if (*type == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+    (*type)[0] = 2;
+
+    return 1;
+}
+
+int recurring_task_only_month(char *dateString, char **sqlQuery, char ***input, uint8_t **type)
+{
+    *sqlQuery = strdup("SELECT * FROM recurring_tasks WHERE frequency = 'monthly' AND date_begin <= ? AND (date_expires >= ? OR date_expires IS NULL) ORDER BY time");
+
+    *input = malloc(2 * sizeof(char *));
+    if (*input == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+
+    (*input)[0] = strdup(dateString);
+    (*input)[1] = strdup(dateString);
+
+    *type = malloc(sizeof(uint8_t));
+    if (*type == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+
+    (*type)[0] = 1;
+    (*type)[1] = 1;
+
+    return 2;
+}
+
+int recurring_task_only_week(char *dateString, char **sqlQuery, char ***input, uint8_t **type)
+{
+    *sqlQuery = strdup("SELECT * FROM recurring_tasks WHERE frequency = 'weekly' AND date_begin <= ? AND (date_expires >= ? OR date_expires IS NULL) ORDER BY time");
+
+    *input = malloc(2 * sizeof(char *));
+    if (*input == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+
+    (*input)[0] = strdup(dateString);
+    (*input)[1] = strdup(dateString);
+
+    *type = malloc(sizeof(uint8_t));
+    if (*type == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+
+    (*type)[0] = 1;
+    (*type)[1] = 1;
+
+    return 2;
+}
+
+bool is_recurring_task_valid_on_given_day(char *date, char *frequency, char *searchDate)
+{
+    //printf("\n------\ndate - %s\nfrequency - %s\narg - %s\n", date, frequency, searchDate);
+    if (strcmp(frequency, "daily") == 0) return true;
+
+    if (strcmp(frequency, "monthly") == 0)
+    {
+        uint16_t year;
+        uint8_t month;
+        uint8_t day;
+
+        uint8_t dateTest = atoi(date);
+        sscanf(searchDate, "%hu-%hhu-%hhu", &year, &month, &day);
+
+        if (day == dateTest) return true;
+        else return false;
+    }
+
+    if (strcmp(frequency, "weekly") == 0)
+    {
+        struct tm tm = {0};
+        sscanf(searchDate, "%d-%d-%d", &tm.tm_year, &tm.tm_mon, &tm.tm_mday);
+        tm.tm_year -= 1900;
+        tm.tm_mon -= 1;
+        mktime(&tm);
+
+        int weekday= atoi(date);
+
+        if (tm.tm_wday == weekday) return true;
+        else return false;
+
+    }
+    return false;
+}
+
+char *validate_recurring_task(char *line, char *arg, char option, char *searchDate, bool *valid, char *id)
 {
     char *buffer = strdup(line);
     char taskID[8] = {0};
@@ -766,58 +909,128 @@ char *validate_recurring_task(char *line, char option, bool *valid, char *id)
             }
         }
     }
-    *valid = true;
 
-    int size = snprintf(NULL, 0, "id:%s -> %s [%s] first occurence: %s, frequency: %s, expires: %s\n", taskID, taskString, strcmp(timeString, "NULL") == 0 ? "task" : timeString, firstOccurence, frequency, strcmp(expires, "NULL") == 0 ? "never" : expires);
-    char *result = malloc(size + 1);
-    snprintf(result, size + 1, "id:%s -> %s [%s] first occurence: %s, frequency: %s, expires: %s\n", taskID, taskString, strcmp(timeString, "NULL") == 0 ? "task" : timeString, firstOccurence, frequency, strcmp(expires, "NULL") == 0 ? "never" : expires);
+
+    char day[3];
+    char month[3];
+    if (option == 'o' || option == 'm' || option == 'w')
+        *valid = is_recurring_task_valid_on_given_day(date, frequency, searchDate) ? true : false;
+    else *valid = true;
+
+
+    char *result;
+    if (valid)
+    {
+        if (option == '!' || option == 'l') //non day selected print out all of
+        {
+            memcpy(day, firstOccurence + 8, 2);
+            memcpy(month, firstOccurence + 5, 2);
+
+            if (strcmp(timeString, "NULL") == 0)
+            {
+                int size = snprintf(NULL, 0, "* [%s] -> %s {%s.%s} {%s} id:%s", frequency, taskString, day, month, strcmp(expires, "NULL") == 0 ? "indefinate" : expires, taskID);
+                result = malloc(size + 1);
+                snprintf(result, size +1, "* [%s] -> %s {%s.%s} {%s} id:%s", frequency, taskString, day, month, strcmp(expires, "NULL") == 0 ? "indefinate" : expires, taskID);
+            }
+            else
+            {
+                uint32_t hour;
+                uint32_t min;
+                hour = atoi(timeString);
+                min = (hour % 3600) / 60;
+                hour = hour / 3600;
+                int size = snprintf(NULL, 0, "* [%s] @ %d:%02d -> %s {%s.%s} {%s} id:%s", frequency, hour, min, taskString, day, month, strcmp(expires, "NULL") == 0 ? "indefinate" : expires, taskID);
+                result = malloc(size + 1);
+                snprintf(result, size +1, "* [%s] @ %d:%02d -> %s {%s.%s} {%s} id:%s", frequency, hour, min, taskString, day, month, strcmp(expires, "NULL") == 0 ? "indefinate" : expires, taskID);
+            }
+        }
+        else if (strcmp(timeString, "NULL") == 0)
+        {
+            memcpy(day, searchDate + 8, 2);
+            memcpy(month, searchDate + 5, 2);
+
+            int size = snprintf(NULL, 0, "*%s.%s -> %s [%s] {%s} id:%s", day, month, taskString, frequency, strcmp(expires, "NULL") == 0 ? "indefinate" : expires, taskID);
+            result = malloc(size + 1);
+            snprintf(result, size + 1, "*%s.%s -> %s [%s] {%s} id:%s", day, month, taskString, frequency, strcmp(expires, "NULL") == 0 ? "indefinate" : expires, taskID);
+        }
+        else
+        {
+            memcpy(day, searchDate + 8, 2);
+            memcpy(month, searchDate + 5, 2);
+
+            uint32_t hour;
+            uint32_t min;
+            hour = atoi(timeString);
+            min = (hour % 3600) / 60;
+            hour = hour / 3600;
+            int size = snprintf(NULL, 0, "*%s.%s %d:%02d -> %s [%s] {%s} id:%s", day, month, hour, min, taskString, frequency, strcmp(expires, "NULL") == 0 ? "indefinate" : expires, taskID);
+            result = malloc(size + 1);
+            snprintf(result, size + 1, "*%s.%s %d:%02d -> %s [%s] {%s} id:%s", day, month, hour, min, taskString, frequency, strcmp(expires, "NULL") == 0 ? "indefinate" : expires, taskID);
+        }
+    }
     free(buffer);
     return result;
 }
 
-void recurring_task_printer(char *result, char option)
+void recurring_task_printer(char *result, char *arg, char option, char *searchDate)
 {
+    //printf("HERE\n");
+    //printf("!%s\n", result);
     char *line = strtok(result, "\n");
 
     while(line != NULL)
     {
         char id[8];
-        bool valid = false;
-        char *task = validate_recurring_task(line, option, &valid, id);
+        bool valid;
+        //printf("%s\n", line);
+        char *task = validate_recurring_task(line, arg, option, searchDate, &valid,  id);
 
         if(valid) printf("%s\n", task);
 
         free(task);
         line = strtok(NULL, "\n");
     }
+    free(line);
 }
 
-
-void recurrring_task_show(char *arg, char option)
+void recurring_task_show(char *arg, char option)
 {
     char *sqlQuery = NULL;
     char **input = NULL;
     uint8_t *type = NULL;
-    uint32_t n;
-    uint32_t currentDateStamp;
-    uint32_t currentTimeStamp;
+    int n;
 
-    time_t t = time(NULL);
-    struct tm tm = *localtime(&t);
-    currentTimeStamp = (tm.tm_hour * 3600) + (tm.tm_min * 60) + tm.tm_sec;
-    tm.tm_hour = 0;
-    tm.tm_min = 0;
-    tm.tm_sec = 0;
-    time_t now = mktime(&tm);
-    currentDateStamp = now;
+    set_time_date();
+    char *searchDate;   //setting here to avoid strtok error in validation of task
+    if(option == 'o' || option == 'm' || option == 'w')
+    {
+        int dateCheck = input_where(arg, &searchDate);
+        if (dateCheck != 1)
+        {
+            if (dateCheck == -2) printf("ERROR - invaild date\n");
+            else printf("ERROR - Invalid date string\n");
 
-
-
+            free(searchDate);
+            return;
+        }
+    }
 
     switch (option)
     {
+    case 'o' :
+        n = recurring_day_search(searchDate, &sqlQuery, &input, &type); //specific day search
+        break;
+    case '!':
+        n = recurring_single_search_ID(arg, &sqlQuery, &input, &type); //searching for task with given unique ID
+        break;
+    case 'm':
+        n = recurring_task_only_month(searchDate, &sqlQuery, &input, &type); //searching only monthly task for outlook function
+        break;
+    case 'w':
+        n = recurring_task_only_week(searchDate, &sqlQuery, &input, &type); //searching only monthly task for outlook function
+        break;
     case '.':
-        sqlQuery = strdup("SELECT * FROM recurring_tasks ORDER BY date_begin");
+        sqlQuery = strdup("SELECT * FROM recurring_tasks ORDER BY date_begin DESC");
         n = 0;
         break;
     case 'l':
@@ -825,29 +1038,30 @@ void recurrring_task_show(char *arg, char option)
         n = 0;
         break;
     default:
-        printf("ERROR - could not find options for recurring_task_print");
+        printf("ERROR - could not find options for recurring_task_print\n");
         return;
     }
 
-    char *result = db_stmt_build_execute_string_return(n, input, type, sqlQuery, "tasks.db");
-
-    printf("%s", result);
-
-    recurring_task_printer(result, option);
-
-    if (n > 1)
+    if (n >= 0)
     {
-        for(int i = 0; i < n; i++)
-        {
-            free((input)[i]);
-        }
-    }
+        char *result = db_stmt_build_execute_string_return(n, input, type, sqlQuery, "tasks.db");
 
+        //printf("%s\n", result);
+
+        if(strlen(result) > 1) recurring_task_printer(result, arg, option, searchDate);
+        if (n > 1)
+        {
+            for(int i = 0; i < n; i++)
+            {
+                free((input)[i]);
+            }
+        }
+        free(result);
+    }
     free(input);
     free(type);
     free(sqlQuery);
 
-    free(result);
 }
 
 int frequency_input_helper(char *occurance)
@@ -884,7 +1098,7 @@ int occurence_input_helper(char *frequency, char *firstOccurence)
 
 }
 
-void recurrring_task_insert(char *taskArgs)
+void recurring_task_insert(char *taskArgs)
 {
     set_time_date();
 
@@ -898,14 +1112,13 @@ void recurrring_task_insert(char *taskArgs)
         field[fieldNumber++] = strdup(token);
         token = strtok(NULL, "|");
     }
-    for (int j = 0; j < fieldNumber; j++) printf("Field %d: %s\n", j, field[j]);
-    printf("fieldNumber: %d\n", fieldNumber);
+    //for (int j = 0; j < fieldNumber; j++) printf("Field %d: %s\n", j, field[j]);
+    //printf("fieldNumber: %d\n", fieldNumber);
 
     if (fieldNumber < 3)
     {
         printf("ERROR - Missing required fields for recurring task input\n");
         return;
-
     }
 
     char *taskString = malloc(strlen(field[0]) + 1);
@@ -972,7 +1185,7 @@ void recurrring_task_insert(char *taskArgs)
     if (fieldNumber == 3) // no end date or time
     {
         char *sqlQuery = "INSERT INTO recurring_tasks(frequency, date_occurence, task, date_begin) "
-                         "VALUES(?, ?, ?, strftime('%s', ?, 'start of day', 'localtime'))";
+                         "VALUES(?, ?, ?, ?)";
 
         const char *input[] = { frequency, occurenceString, taskString, firstOccurence };
         uint8_t type[] = { 1, 2, 1, 1 };
@@ -982,7 +1195,7 @@ void recurrring_task_insert(char *taskArgs)
     else if (fieldNumber == 4) // with end date
     {
         char *sqlQuery = "INSERT INTO recurring_tasks(frequency, date_occurence, task, date_begin, date_expires) "
-                         "VALUES(?, ?, ?, strftime('%s', ?, 'start of day'), strftime('%s', ?, 'start of day'))";
+                         "VALUES(?, ?, ?, ?, ?)";
 
         const char *input[] = { frequency, occurenceString, taskString, firstOccurence, endDateString };
         uint8_t type[] = { 1, 2, 1, 1, 1 };
@@ -1010,7 +1223,7 @@ void recurrring_task_insert(char *taskArgs)
         if (hasEndDate) // task with time and endtime
         {
             char *sqlQuery = "INSERT INTO recurring_tasks(frequency, date_occurence, time, task, date_begin, date_expires) "
-                             "VALUES(?, ?, strftime('%s', ?, ?) % 86400, ?, strftime('%s', ?, 'start of day'), strftime('%s', ?, 'start of day'))";
+                             "VALUES(?, ?, strftime('%s', ?, ?) % 86400, ?, ?, ?)";
 
             const char *input[] = { frequency, occurenceString, firstOccurence, timeString, taskString, firstOccurence, endDateString };
             uint8_t type[] = { 1, 2, 1, 1, 1, 1, 1};
@@ -1019,7 +1232,7 @@ void recurrring_task_insert(char *taskArgs)
         else // entry for task with time but no endtime
         {
             char *sqlQuery = "INSERT INTO recurring_tasks(frequency, date_occurence, time, task, date_begin) "
-                             "VALUES(?, ?, strftime('%s', ?, ?) % 86400, ?, strftime('%s', ?, 'start of day'))";
+                             "VALUES(?, ?, strftime('%s', ?, ?) % 86400, ?, ?)";
 
             const char *input[] = { frequency, occurenceString, firstOccurence, timeString, taskString, firstOccurence };
             uint8_t type[] = { 1, 2, 1, 1, 1, 1, };
@@ -1029,14 +1242,225 @@ void recurrring_task_insert(char *taskArgs)
         free(timeString);
     }
 
-
-
-    recurrring_task_show(NULL, 'l');
-
     free(taskString);
     free(firstOccurence);
     free(frequency);
+    for (int j = 0; j < fieldNumber; j++) free(field[j]);
+
+    recurring_task_show(NULL, 'l');
+    printf("Recurring task added!\n");
 }
+
+void recurring_task_input_guide()
+{
+    bool correct = false;
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t read;
+
+    char taskString[1024] = {0};
+    char frequency[16] = {0};
+    char firstOccurence[11] = {0};
+    char endOccurence[11] = {0};
+    char timeString[6] = {0};
+
+    printf("\nRecurring task input formatter!\n\n");
+    printf("task: ");
+
+    read = getline(&line, &len, stdin);
+    if (read == -1)
+    {
+        printf("ERROR - reading input\n");
+        free(line);
+        return;
+    }
+    trim(line);
+    strcpy(taskString, line);
+
+    do
+    {
+        printf("\nfrequency (daily / weekly / monthly): ");
+
+        read = getline(&line, &len, stdin);
+        if (read == -1)
+        {
+            printf("ERROR - reading input\n");
+            free(line);
+            return;
+        }
+        trim(line);
+        strcpy(frequency, line);
+
+        if (frequency_input_helper(frequency) != 1)
+            printf("ERROR - Invalid frequency input\n");
+        else
+            correct = true;
+    }
+    while (!correct);
+
+
+    do
+    {
+        printf("Start date DD.MM.YYYY: ");
+        read = getline(&line, &len, stdin);
+        if (read == -1)
+        {
+            printf("ERROR - reading input\n");
+            free(line);
+            return;
+        }
+        trim(line);
+
+        set_time_date();
+        char *tmpCheck;
+        int dateCheck = input_where(line, &tmpCheck);
+        if (dateCheck != 1)
+        {
+            if (dateCheck == -2) printf("ERROR - invaild date\n");
+            else printf("ERROR - Invalid date string\n");
+            correct = false;
+            free(tmpCheck);
+        }
+        else
+        {
+            strcpy(firstOccurence, line);
+            free(tmpCheck);
+            correct = true;
+        }
+    }
+    while(!correct);
+
+    do
+    {
+        printf("End date DD.MM.YYYY (or press enter for no end date): ");
+        read = getline(&line, &len, stdin);
+        if (read == -1)
+        {
+            printf("ERROR - reading input\n");
+            free(line);
+            return;
+        }
+        trim(line);
+
+        if (strlen(line) == 0)
+        {
+            strcpy(endOccurence, "-");
+            correct = true;
+        }
+        else
+        {
+            set_time_date();
+            char *tmpCheck;
+            int dateCheck = input_where(line, &tmpCheck);
+            if (dateCheck != 1)
+            {
+                if (dateCheck == -2) printf("ERROR - invaild date\n");
+                else printf("ERROR - Invalid date string\n");
+                correct = false;
+                free(tmpCheck);
+            }
+            else
+            {
+                strcpy(endOccurence, line);
+                free(tmpCheck);
+                correct = true;
+            }
+        }
+
+    }
+    while(!correct);
+
+    do
+    {
+        printf("Time HH:MM (or press enter for no time): ");
+        read = getline(&line, &len, stdin);
+        if (read == -1)
+        {
+            printf("ERROR - reading input\n");
+            free(line);
+            return;
+        }
+        trim(line);
+
+        if (strlen(line) == 0)
+        {
+            strcpy(timeString, "NULL");
+            correct = true;
+        }
+        else
+        {
+            char *tempCheck;
+            strcpy(tempCheck, line);
+            int timeCheck = time_input_helper(&tempCheck);
+            if (timeCheck != 1)
+            {
+                correct = false;
+                printf("ERROR - Invalid time input\n");
+            }
+            else
+            {
+                strcpy(timeString, line);
+                correct = true;
+            }
+        }
+    }
+    while(!correct);
+
+    char *inputArg;
+    int size;
+    if (strcmp(timeString, "NULL") == 0 && strcmp(endOccurence, "-") == 0)
+    {
+        size = snprintf(NULL, 0, "%s | %s | %s", taskString, frequency, firstOccurence);
+        inputArg = malloc(size + 1);
+        snprintf(inputArg, size + 1, "%s | %s | %s", taskString, frequency, firstOccurence);
+    }
+    else if (strcmp(timeString, "NULL") == 0 && strcmp(endOccurence, "-") != 0)
+    {
+        size = snprintf(NULL, 0, "%s | %s | %s | %s", taskString, frequency, firstOccurence, endOccurence);
+        inputArg = malloc(size + 1);
+        snprintf(inputArg, size + 1, "%s | %s | %s | %s", taskString, frequency, firstOccurence, endOccurence);
+    }
+    else if (strcmp(timeString, "NULL") != 0 && strcmp(endOccurence, "-") == 0)
+    {
+        size = snprintf(NULL, 0, "%s | %s | %s | %s | %s", taskString, frequency, firstOccurence, endOccurence, timeString);
+        inputArg = malloc(size + 1);
+        snprintf(inputArg, size + 1, "%s | %s | %s | %s | %s", taskString, frequency, firstOccurence, endOccurence, timeString);
+    }
+    else
+    {
+        size = snprintf(NULL, 0, "%s | %s | %s | %s | %s", taskString, frequency, firstOccurence, endOccurence, timeString);
+        inputArg = malloc(size + 1);
+        snprintf(inputArg, size + 1, "%s | %s | %s | %s | %s", taskString, frequency, firstOccurence, endOccurence, timeString);
+    }
+
+    //printf("%s\n", inputArg);
+    recurring_task_insert(inputArg);
+
+    free(line);
+    free(inputArg);
+    printf("Recurring task added!\n");
+}
+
+void remove_recurring_task(char *id)
+{
+    printf("Are you sure you want to remove recurring task:\n");
+    recurring_task_show(id, '!');
+
+    printf("(y/n)?\n");
+    char response = getchar();
+    getchar();
+    if (response != 'y' && response != 'Y')
+    {
+        printf("Recurring task removal cancelled.\n");
+        return;
+    }
+
+    const char *sqlQuery = "DELETE FROM recurring_tasks WHERE id = ?";
+    const char *input[] = { id };
+    uint8_t type[] = { 2 };
+    db_stmt_build_execute(1, input, type, sqlQuery, "tasks.db");
+}
+
 
 //#### Recurring task input helper, update and delete to be added ####
 
@@ -1048,8 +1472,6 @@ void task_outlook(char option)
 {
     uint32_t range;
     char *outlook;
-
-
 
     switch (option)
     {
@@ -1083,10 +1505,40 @@ void task_outlook(char option)
 
     while (range > 1)
     {
+        set_time_date();
+        char *dateString = date_calculator_from_range(range);
+        //print_week_and_day(dateString);
 
+        range == 6 ? printf("---- Week %s ----\n", dateString) : printf("");
+        task_show(dateString, 'o');
+        recurring_task_show(dateString, 'o');
 
         range--;
+        printf("\n");
     }
+
+    if (range == 1)
+    {
+        set_time_date();
+        char *dateString = date_calculator_from_range(range);
+        printf("\n---- Tomorrow %s ----\n", dateString);
+        task_show(dateString, 'o');
+        recurring_task_show(dateString, 'o');
+        range--;
+    }
+
+    if (range == 0)
+    {
+        set_time_date();
+        char *dateString = date_calculator_from_range(range);
+        printf("\n---- Today %s ----\n", dateString);
+        task_show(dateString, 'o');
+        recurring_task_show(dateString, 'o');
+        range--;
+    }
+
+    printf("\n---- tasks ----\n");
+    task_show(NULL, 't');
 
 
 
@@ -1133,8 +1585,8 @@ void set_config()
         "date_occurence INTEGER NOT NULL, " // for weekly sun - sat (0 - 6), monthly (1 - 31)
         "time INTEGER, "
         "task TEXT NOT NULL, "
-        "date_begin INTEGER NOT NULL, "
-        "date_expires INTEGER);";
+        "date_begin TEXT NOT NULL, "
+        "date_expires TEXT);";
 
 
     char *errmsg = NULL;

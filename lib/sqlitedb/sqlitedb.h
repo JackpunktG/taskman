@@ -33,7 +33,7 @@ char *sqlitedb_excute_stmt_result_as_string(SqliteDB *db_wrapper, sqlite3_stmt *
 // type - array of parameter types (1 = text, 2 = int)
 // sql - SQL query with '?' placeholders for parameters
 void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const char *sql, const char *dbPath);
-// Single string result - 1 line per result '\n'. result with '|' delimited after every column
+// Single string result - 1 line per result '\n'. result with '|' delimited after every field
 // Must be freed by caller
 char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_t *type, const char *sql, const char *dbPath);
 
@@ -46,7 +46,5 @@ char *time_string_from_timestamp(uint32_t timestamp);
 char *date_string_from_timestamp(uint32_t timestamp);
 char *date_and_time_string_from_timestamp(uint32_t timestamp);
 
-// helper function for configuring input to HH:MM
-// then checks to see if vaild time string. returns 1 for all good or -1 for invalid
-int time_input_helper(char **input);
+
 #endif

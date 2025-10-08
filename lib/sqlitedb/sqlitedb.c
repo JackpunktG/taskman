@@ -203,90 +203,6 @@ void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const 
     sqlitedb_close(db);
 }
 
-bool time_check(char *input)
-{
-    uint8_t hourDigit1 = input[0] - '0';
-    uint8_t hourDigit2 = input[1] - '0';
-    uint8_t minDigit1 = input[3] - '0';
-
-    if (hourDigit1 > 2) return false;
-    if (hourDigit1 == 2)
-        if (hourDigit2 > 3) return false;
-
-    if (minDigit1 > 5) return false;
-
-    return true;
-}
-
-int time_input_helper(char **input)
-{
-    uint32_t length = strlen(*input);
-    bool doublePoint = false;
-
-    for (int i = 0; i < length; i++)
-    {
-        if ((*input)[i] == ':') doublePoint = true;
-    }
-
-    if (doublePoint)
-    {
-        if (length == 4 && (*input)[1] == ':')
-        {
-            char fixedTime[6] = {0};
-            fixedTime[0] = '0';
-            fixedTime[1] = (*input)[0];
-            fixedTime[2] = (*input)[1];
-            fixedTime[3] = (*input)[2];
-            fixedTime[4] = (*input)[3];
-            fixedTime[5] = '\0';
-
-            *input = realloc(*input, 6);
-            if (*input == NULL) return -1;
-            strcpy(*input, fixedTime);
-            return time_check(*input) ? 1 : -1;
-        }
-        else if (length == 5 && (*input)[2] == ':')
-            return time_check(*input) ? 1 : -1;
-        else
-            return -1;
-    }
-    else
-    {
-        if (length == 1)
-        {
-            char fixedTime[6] = {0};
-            fixedTime[0] = '0';
-            fixedTime[1] = (*input)[0];
-            fixedTime[2] = ':';
-            fixedTime[3] = '0';
-            fixedTime[4] = '0';
-            fixedTime[5] = '\0';
-
-            *input = realloc(*input, 6);
-            if (*input == NULL) return -1;
-            strcpy(*input, fixedTime);
-            return time_check(*input) ? 1 : -1;
-        }
-        else if (length == 2)
-        {
-            char fixedTime[6] = {0};
-            fixedTime[0] = (*input)[0];
-            fixedTime[1] = (*input)[1];
-            fixedTime[2] = ':';
-            fixedTime[3] = '0';
-            fixedTime[4] = '0';
-            fixedTime[5] = '\0';
-
-            *input = realloc(*input, 6);
-            if (*input == NULL) return -1;
-            strcpy(*input, fixedTime);
-            return time_check(*input) ? 1 : -1;
-        }
-        else
-            return -1;
-    }
-}
-
 char *time_string_from_timestamp(uint32_t timestamp)
 {
     time_t ts = (time_t)timestamp;
@@ -324,7 +240,7 @@ void direct_sql(char *dbPath, char *sql)
         return;
     }
 
-    if (sqlite3_exec(db, sql, console_print, NULL, NULL)  != SQLITE_OK)
+    if (sqlite3_exec(db->db, sql, console_print, NULL, NULL)  != SQLITE_OK)
     {
         printf("SQL error: %s\n", sqlitedb_error(db));
     }
