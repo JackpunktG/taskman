@@ -18,9 +18,11 @@ It stores the data in a simple SQlight database, making it easy to manage and qu
 
 ### Task Input
 Taskman -h or --help will show you the help menu with all commands and options. Here is a quick overview of the basic commands:
+
 task -> "task/appointment | *date | *time"
+
 recuring tasks -> "task/appointment | frequency | start_date | *end_date | *time"
- * denotes optional fields and will alter the task type accordingly
+ * [*] denotes optional fields and will alter the task type accordingly
 
 
 ### Bash Example Session
