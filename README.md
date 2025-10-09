@@ -29,6 +29,7 @@ recuring tasks -> "task/appointment | frequency | start_date | *end_date | *time
 ### Bash Example Session
 
 A few input examples
+
 ![input1](images/input5.png)
 ![input2](images/input2.png)
 ![input3](images/input3.png)
@@ -38,17 +39,21 @@ A few input examples
 ![input7](images/input8.png)
 ![input8](images/inputting.png)
 
+
 then looking at todays tasks
 
-![today](images/today.png)
+![today](images/Today.png)
+
 
 now to complete a task
 
-![complete](images/completinh.png)
+![complete](images/completing.png)
+
 
 and now that task is gone from the list
 
-![aftercomplete](images/after_complete.png)
+![aftercomplete](images/after_completing.png)
+
 
 some forcase views
 
