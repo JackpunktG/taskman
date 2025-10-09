@@ -397,22 +397,33 @@ void pop_up(char *result)
         char id[8];
         char *task = process_line(line, id);
         size_t len = strlen(task);
-        size_t cmdSize = len + 60;
-        char *cmd = malloc(cmdSize);
-        snprintf(cmd, cmdSize, "xmessage -buttons 'Okay:0,Delay:1' 'Termin in 15 minutes.\n%s'", task);
-        printf("%s", cmd);
+        size_t cmdSize = snprintf(NULL, 0, "xmessage -buttons '-Complete-:0,-Delay5min-:5,-Delay10min-:10,-Delay15min-:15,-Delay30min-:30' 'Termin in 15 minutes!!\n\n%s'", task);
+        char *cmd = malloc(cmdSize + len + 1);
+        snprintf(cmd, cmdSize + len +1, "xmessage -buttons '-Complete-:0,-Delay5min-:5,-Delay10min-:10,-Delay15min-:15,-Delay30min-:30' 'Termin in 15 minutes!!\n\n%s'", task);
         if (cmd != NULL)
         {
             int message = system(cmd);
             {
-                if (message == 1)
+                switch (message)
                 {
-                    // need to build system("alacritty --command taskman -delay");
-                }
-
-                else
-                {
+                case 0:
                     task_complete(id);
+                    break;
+                case 1280:
+                    delay_task(id, 5);
+                    break;
+                case 2560:
+                    delay_task(id, 10);
+                    break;
+                case 3840:
+                    delay_task(id, 15);
+                    break;
+                case 7680:
+                    delay_task(id, 30);
+                    break;
+                default:
+                    printf("No action taken\n");
+                    break;
                 }
             }
         }
@@ -606,6 +617,22 @@ void task_complete(char *id) //when postponing general tasks, they get the date 
     task_show(id, '!');
 }
 
+
+void delay_task(char *id, int timeInMinutes)
+{
+    uint32_t addition = timeInMinutes * 60;
+    char additionStr[16] = {0};
+    sprintf(additionStr, "%d", addition);
+    char *sqlQuery = "UPDATE tasks SET time = time + ? WHERE id = ?";
+    const char *input[] = { additionStr, id };
+    uint8_t type[] = { 1, 2 };
+
+
+    db_stmt_build_execute(2, input, type, sqlQuery, "tasks.db");
+
+    task_show(id, '!');
+    printf("DELAYED\n");
+}
 
 void task_postpone(char *id, char *dateAndTimeArg)
 {

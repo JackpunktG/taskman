@@ -43,11 +43,17 @@ void run_args(char **args)
     {
         task_postpone(args[2], args[3]);
     }
+    else if (strcmp(args[1], "--delay") == 0)
+    {
+        if (args[2] == NULL && args[3] == NULL) printf("ERROR - Missing time and or ID arg\n");
+        else delay_task(args[2], atoi(args[3]));
+    }
+
     else if (strcmp(args[1], "-rm") == 0)
     {
         remove_task(args[2]);
     }
-    else if(strcmp(args[1], "task") == 0)
+    else if(strcmp(args[1], "task") == 0 || strcmp(args[1], "tasks") == 0)
     {
         task_show(NULL, 't');
     }

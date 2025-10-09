@@ -10,6 +10,7 @@ void recurring_task_show(char *arg, char option);
 void task_show(char *arg, char option);
 void task_complete(char *id);
 void task_postpone(char *id, char *whenSt);
+void delay_task(char *id, int timeInMinutes);
 void remove_task(char *id);
 void set_config();
 
