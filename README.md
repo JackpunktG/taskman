@@ -25,9 +25,10 @@ recuring tasks -> "task/appointment | frequency | start_date | *end_date | *time
  * [*] denotes optional fields and will alter the task type accordingly
 
 
+
 ### Bash Example Session
 
-A few input examples:
+A few input examples
 ![input1](images/input5.png)
 ![input2](images/input2.png)
 ![input3](images/input3.png)
@@ -37,23 +38,29 @@ A few input examples:
 ![input7](images/input8.png)
 ![input8](images/inputting.png)
 
-then looking at todays tasks:
+then looking at todays tasks
+
 ![today](images/today.png)
 
-now to complete a task:
+now to complete a task
+
 ![complete](images/completinh.png)
 
-and now that task is gone from the list:
+and now that task is gone from the list
+
 ![aftercomplete](images/after_complete.png)
 
-some forcase views:
+some forcase views
+
 ![outlook](images/monthly.png)
 ![outlook2](images/weekly.png)
 ![outlook3](images/fort.png)
 ![outlook4](images/tomorrow.png)
 
-Crontab reminder:
+Crontab reminder
+
 ![crontab](images/crontab.png)
+
 sooo beautiful!
 
 
