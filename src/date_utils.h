@@ -18,6 +18,9 @@ int input_where(char *when, char **result);
 // then checks to see if vaild time string. returns 1 for all good or -1 for inval
 int time_input_helper(char **input);
 
+// current timestamp in minutes since epoch
+uint32_t seconds_since_midnight_minAccuracy();
+
 void print_week_and_day(char *dateString);
 #endif // DATE_UTILS_H
 #include <stdlib.h>

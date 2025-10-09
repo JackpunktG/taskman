@@ -10,13 +10,17 @@ TASKMAN_SRC = src/main.c src/task_ops.c src/date_utils.c src/string_utils.c
 SQLITEDB_OBJ = $(SQLITEDB_SRC:.c=.o)
 TASKMAN_OBJ = $(TASKMAN_SRC:.c=.o)
 
+# db path
+DB_PATH ?= tasks.db
+CFLAGS += -DDB_PATH=\"$(DB_PATH)\"
+
 # Define targets
 .PHONY: all clean
 
-all: taskmanTesting
+OUT ?= taskman
 
-taskmanTesting: $(SQLITEDB_OBJ) $(TASKMAN_OBJ)
-	$(CC) $(CFLAGS) $^ -o $@ $(LDFLAGS)
+all: $(SQLITEDB_OBJ) $(TASKMAN_OBJ)
+	$(CC) $(CFLAGS) $^ -o $(OUT) $(LDFLAGS)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@

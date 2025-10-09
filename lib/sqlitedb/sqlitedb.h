@@ -46,5 +46,4 @@ char *time_string_from_timestamp(uint32_t timestamp);
 char *date_string_from_timestamp(uint32_t timestamp);
 char *date_and_time_string_from_timestamp(uint32_t timestamp);
 
-
 #endif

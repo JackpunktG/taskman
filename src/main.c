@@ -48,7 +48,6 @@ void run_args(char **args)
         if (args[2] == NULL && args[3] == NULL) printf("ERROR - Missing time and or ID arg\n");
         else delay_task(args[2], atoi(args[3]));
     }
-
     else if (strcmp(args[1], "-rm") == 0)
     {
         remove_task(args[2]);
@@ -69,6 +68,10 @@ void run_args(char **args)
     {
         recurring_task_show(args[2], 'o');
     }
+    else if (strcmp(args[1], "-rmr") == 0)
+    {
+        remove_recurring_task(args[2]);
+    }
     else if(strcmp(args[1], "-idr") == 0)
     {
         recurring_task_show(args[2], '!');
@@ -80,7 +83,7 @@ void run_args(char **args)
     //******************************************************************************
     //Combination and outlook Args
     //******************************************************************************
-    else if(strcmp(args[1], "today") == 0)
+    else if(strcmp(args[1], "today") == 0 || strcmp(args[1], "tdy") == 0 || strcmp(args[1], "t") == 0)
     {
         task_outlook('!');
     }
@@ -88,7 +91,7 @@ void run_args(char **args)
     {
         task_outlook('t');
     }
-    else if(strcmp(args[1], "week") == 0)
+    else if(strcmp(args[1], "week") == 0 || strcmp(args[1], "weekly") == 0 || strcmp(args[1], "wk") == 0)
     {
         task_outlook('w');
     }
@@ -96,7 +99,7 @@ void run_args(char **args)
     {
         task_outlook('f');
     }
-    else if(strcmp(args[1], "month") == 0)
+    else if(strcmp(args[1], "month") == 0 || strcmp(args[1], "monthly") == 0 || strcmp(args[1], "mth") == 0)
     {
         task_outlook('m');
     }
@@ -107,13 +110,18 @@ void run_args(char **args)
     else if (strcmp(args[1], "-check") == 0)
     {
         task_show(NULL, 'r');
+        recurring_task_show("today", 'r');
     }
     //******************************************************************************
     //misc. Args
     //******************************************************************************
     else if (strcmp(args[1], "-sql") == 0)
     {
-        direct_sql("tasks.db", args[2]);
+        direct_sql(DB_PATH, args[2]);
+    }
+    else if (strcmp(args[1], "-h") == 0 || strcmp(args[1], "--help") == 0)
+    {
+        print_help();
     }
     else
     {
@@ -123,7 +131,7 @@ void run_args(char **args)
 
 int main(int argc, char *args[])
 {
-    if (access("tasks.db", F_OK) != 0)
+    if (access(DB_PATH, F_OK) != 0)
     {
         printf("Cannot find database\nIf this is your first time, no worries. We'll create one :)\n");
         set_config();

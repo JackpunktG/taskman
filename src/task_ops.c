@@ -386,7 +386,7 @@ void print_task(char *result)
 }
 
 
-void pop_up(char *result)
+/*void pop_up(char *result)   //IN SOURCE CODE CALLING OF XMESSAGE
 {
     char *buffer = strdup(result);
 
@@ -435,9 +435,39 @@ void pop_up(char *result)
         free(task);
         line = strtok(NULL, "\n");
     }
-
     free(buffer);
+}
+*/
+void pop_up(char *result)
+{
+    char *buffer = strdup(result);
 
+    char *line = strtok(buffer, "\n");
+
+    while (line != NULL)
+    {
+        char id[8];
+        char *task = process_line(line, id);
+
+        printf("Reminder!!!\nappointment in 15min: %s", task);
+        int option;
+        printf("Options:\n1. Complete task (0)\n2. Delay task by n minutes (n)\n");
+        scanf("%d", &option);
+        getchar();
+
+        if (option > 0)
+        {
+            delay_task(id, option);
+        }
+        else
+        {
+            task_complete(id);
+        }
+
+        free(task);
+        line = strtok(NULL, "\n");
+    }
+    free(buffer);
 }
 
 void task_show(char *arg, char option)
@@ -491,7 +521,7 @@ void task_show(char *arg, char option)
 
     if (n >= 0)
     {
-        char *result = db_stmt_build_execute_string_return(n, input, type, sqlQuery, "tasks.db");
+        char *result = db_stmt_build_execute_string_return(n, input, type, sqlQuery, DB_PATH);
 
         //printf("%s", result);
         option != 'r' ? print_task(result) : pop_up(result);
@@ -528,7 +558,7 @@ void task_insert(char *dateAndTimeArg)
         const char *sqlQuery = "INSERT INTO tasks(task, date_added) VALUES(?, strftime('%s', 'now'))";
         const char *input[] = { taskString };
         uint8_t type[] = { 1 };
-        db_stmt_build_execute(1, input, type, sqlQuery, "tasks.db");
+        db_stmt_build_execute(1, input, type, sqlQuery, DB_PATH);
 
         task_show(NULL, 'l');
         printf("ADDED\n");
@@ -578,7 +608,7 @@ void task_insert(char *dateAndTimeArg)
 
                 const char *input[] = { dateString, dateString, timeString, taskString };
                 uint8_t type[] = { 1, 1, 1, 1 };
-                db_stmt_build_execute(4, input, type, sqlQuery, "tasks.db");
+                db_stmt_build_execute(4, input, type, sqlQuery, DB_PATH);
             }
 
         }
@@ -589,7 +619,7 @@ void task_insert(char *dateAndTimeArg)
 
             const char *input[] = { dateString, taskString };
             uint8_t type[] = { 1, 1 };
-            db_stmt_build_execute(2, input, type, sqlQuery, "tasks.db");
+            db_stmt_build_execute(2, input, type, sqlQuery, DB_PATH);
         }
     }
 
@@ -612,7 +642,7 @@ void task_complete(char *id) //when postponing general tasks, they get the date 
     const char *input[] = { id };
     uint8_t type[] = { 2 };
 
-    db_stmt_build_execute(1, input, type, sqlQuery, "tasks.db");
+    db_stmt_build_execute(1, input, type, sqlQuery, DB_PATH);
 
     task_show(id, '!');
 }
@@ -623,12 +653,12 @@ void delay_task(char *id, int timeInMinutes)
     uint32_t addition = timeInMinutes * 60;
     char additionStr[16] = {0};
     sprintf(additionStr, "%d", addition);
-    char *sqlQuery = "UPDATE tasks SET time = time + ? WHERE id = ?";
+    char *sqlQuery = "UPDATE tasks SET time = time + ?, done = 0 WHERE id = ?";
     const char *input[] = { additionStr, id };
     uint8_t type[] = { 1, 2 };
 
 
-    db_stmt_build_execute(2, input, type, sqlQuery, "tasks.db");
+    db_stmt_build_execute(2, input, type, sqlQuery, DB_PATH);
 
     task_show(id, '!');
     printf("DELAYED\n");
@@ -636,7 +666,6 @@ void delay_task(char *id, int timeInMinutes)
 
 void task_postpone(char *id, char *dateAndTimeArg)
 {
-    bool updated;
     set_time_date();
     char *token = strtok(dateAndTimeArg, "|");
     trim(token);
@@ -678,7 +707,7 @@ void task_postpone(char *id, char *dateAndTimeArg)
 
                 const char *input[] = { dateString, dateString, timeString, id };
                 uint8_t type[] = { 1, 1, 1, 2 };
-                db_stmt_build_execute(4, input, type, sqlQuery, "tasks.db");
+                db_stmt_build_execute(4, input, type, sqlQuery, DB_PATH);
 
                 free(timeString);
             }
@@ -689,8 +718,7 @@ void task_postpone(char *id, char *dateAndTimeArg)
 
             const char *input[] = { dateString, id };
             uint8_t type[] = { 1, 2 };
-            db_stmt_build_execute(2, input, type, sqlQuery, "tasks.db");
-            updated = true;
+            db_stmt_build_execute(2, input, type, sqlQuery, DB_PATH);
         }
     }
 
@@ -719,7 +747,7 @@ void remove_task(char *id)
     const char *sqlQuery = "DELETE FROM tasks WHERE id = ?";
     const char *input[] = { id };
     uint8_t type[] = { 2 };
-    db_stmt_build_execute(1, input, type, sqlQuery, "tasks.db");
+    db_stmt_build_execute(1, input, type, sqlQuery, DB_PATH);
 }
 
 //************************************************************************************
@@ -752,6 +780,40 @@ int recurring_day_search(char *dateString, char **sqlQuery, char ***input, uint8
     (*type)[1] = 1;
 
     return 2;
+}
+
+int recurring_timed_task_check(char *dateString, char **sqlQuery, char ***input, uint8_t **type)
+{
+    uint32_t time = seconds_since_midnight_minAccuracy();
+    time = (time + 15 * 60) % 86400;
+    char timeStr[16] = {0};
+    sprintf(timeStr, "%d", time);
+
+    *sqlQuery = strdup("SELECT * FROM recurring_tasks WHERE date_begin <= ? AND (date_expires >= ? OR date_expires IS NULL) AND time = ? ORDER BY time");
+
+    *input = malloc(3 * sizeof(char *));
+    if (*input == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+
+    (*input)[0] = strdup(dateString);
+    (*input)[1] = strdup(dateString);
+    (*input)[2] = strdup(timeStr);
+
+    *type = malloc(sizeof(uint8_t));
+    if (*type == NULL)
+    {
+        printf("ERROR - Memory allocation failed");
+        return -1;
+    }
+
+    (*type)[0] = 1;
+    (*type)[1] = 1;
+    (*type)[2] = 2;
+
+    return 3;
 }
 
 int recurring_single_search_ID(char *id, char **sqlQuery, char ***input, uint8_t **type)
@@ -829,6 +891,29 @@ int recurring_task_only_week(char *dateString, char **sqlQuery, char ***input, u
     (*type)[1] = 1;
 
     return 2;
+}
+
+/*void recurring_pop_up(char *result)       //IN SOURCE CODE CALLING OF XMESSAGE
+{
+
+    size_t len = strlen(result);
+    size_t cmdSize = snprintf(NULL, 0, "xmessage -buttons '-Okay-:0' 'Standing date in 15 minutes!!\n\n%s'", result);
+    char *cmd = malloc(cmdSize + len + 1);
+    snprintf(cmd, cmdSize + len +1, "xmessage -buttons '-Okay-:0' 'Standing date in 15 minutes!!\n\n%s'", result);
+    if (cmd != NULL)
+    {
+        int message = system(cmd);
+        free(cmd);
+    }
+    else
+    {
+        printf("ERROR - allocation of memory for pop up command");
+    }
+}*/
+
+void recurring_pop_up(char *result)
+{
+    printf("Reminder!!!\nstanding appointment in 15min: %s\n", result);
 }
 
 bool is_recurring_task_valid_on_given_day(char *date, char *frequency, char *searchDate)
@@ -940,7 +1025,7 @@ char *validate_recurring_task(char *line, char *arg, char option, char *searchDa
 
     char day[3];
     char month[3];
-    if (option == 'o' || option == 'm' || option == 'w')
+    if (option == 'o' || option == 'm' || option == 'w' || option == 'r')
         *valid = is_recurring_task_valid_on_given_day(date, frequency, searchDate) ? true : false;
     else *valid = true;
 
@@ -1012,7 +1097,8 @@ void recurring_task_printer(char *result, char *arg, char option, char *searchDa
         //printf("%s\n", line);
         char *task = validate_recurring_task(line, arg, option, searchDate, &valid,  id);
 
-        if(valid) printf("%s\n", task);
+        if (valid) (option != 'r') ? printf("%s\n", task) : recurring_pop_up(task);
+
 
         free(task);
         line = strtok(NULL, "\n");
@@ -1027,9 +1113,10 @@ void recurring_task_show(char *arg, char option)
     uint8_t *type = NULL;
     int n;
 
+    //printf("HERE %s %c\n", arg, option);
     set_time_date();
     char *searchDate;   //setting here to avoid strtok error in validation of task
-    if(option == 'o' || option == 'm' || option == 'w')
+    if(option == 'o' || option == 'm' || option == 'w' || option == 'r')
     {
         int dateCheck = input_where(arg, &searchDate);
         if (dateCheck != 1)
@@ -1041,6 +1128,7 @@ void recurring_task_show(char *arg, char option)
             return;
         }
     }
+
 
     switch (option)
     {
@@ -1055,6 +1143,9 @@ void recurring_task_show(char *arg, char option)
         break;
     case 'w':
         n = recurring_task_only_week(searchDate, &sqlQuery, &input, &type); //searching only monthly task for outlook function
+        break;
+    case 'r':
+        n = recurring_timed_task_check(searchDate, &sqlQuery, &input, &type); //checking for recurring appointments in the next 15mins
         break;
     case '.':
         sqlQuery = strdup("SELECT * FROM recurring_tasks ORDER BY date_begin DESC");
@@ -1071,7 +1162,7 @@ void recurring_task_show(char *arg, char option)
 
     if (n >= 0)
     {
-        char *result = db_stmt_build_execute_string_return(n, input, type, sqlQuery, "tasks.db");
+        char *result = db_stmt_build_execute_string_return(n, input, type, sqlQuery, DB_PATH);
 
         //printf("%s\n", result);
 
@@ -1216,7 +1307,7 @@ void recurring_task_insert(char *taskArgs)
 
         const char *input[] = { frequency, occurenceString, taskString, firstOccurence };
         uint8_t type[] = { 1, 2, 1, 1 };
-        db_stmt_build_execute(4, input, type, sqlQuery, "tasks.db");
+        db_stmt_build_execute(4, input, type, sqlQuery, DB_PATH);
         printf("%s\n", firstOccurence);
     }
     else if (fieldNumber == 4) // with end date
@@ -1226,7 +1317,7 @@ void recurring_task_insert(char *taskArgs)
 
         const char *input[] = { frequency, occurenceString, taskString, firstOccurence, endDateString };
         uint8_t type[] = { 1, 2, 1, 1, 1 };
-        db_stmt_build_execute(5, input, type, sqlQuery, "tasks.db");
+        db_stmt_build_execute(5, input, type, sqlQuery, DB_PATH);
 
         free(endDateString);
     }
@@ -1254,7 +1345,7 @@ void recurring_task_insert(char *taskArgs)
 
             const char *input[] = { frequency, occurenceString, firstOccurence, timeString, taskString, firstOccurence, endDateString };
             uint8_t type[] = { 1, 2, 1, 1, 1, 1, 1};
-            db_stmt_build_execute(7, input, type, sqlQuery, "tasks.db");
+            db_stmt_build_execute(7, input, type, sqlQuery, DB_PATH);
         }
         else // entry for task with time but no endtime
         {
@@ -1263,7 +1354,7 @@ void recurring_task_insert(char *taskArgs)
 
             const char *input[] = { frequency, occurenceString, firstOccurence, timeString, taskString, firstOccurence };
             uint8_t type[] = { 1, 2, 1, 1, 1, 1, };
-            db_stmt_build_execute(6, input, type, sqlQuery, "tasks.db");
+            db_stmt_build_execute(6, input, type, sqlQuery, DB_PATH);
         }
 
         free(timeString);
@@ -1485,7 +1576,7 @@ void remove_recurring_task(char *id)
     const char *sqlQuery = "DELETE FROM recurring_tasks WHERE id = ?";
     const char *input[] = { id };
     uint8_t type[] = { 2 };
-    db_stmt_build_execute(1, input, type, sqlQuery, "tasks.db");
+    db_stmt_build_execute(1, input, type, sqlQuery, DB_PATH);
 }
 
 
@@ -1499,6 +1590,7 @@ void task_outlook(char option)
 {
     uint32_t range;
     char *outlook;
+    bool tomorrow = false;
 
     switch (option)
     {
@@ -1509,34 +1601,34 @@ void task_outlook(char option)
     case 't':
         range = 1;
         outlook = strdup("Tomorrow's");
+        tomorrow = true;
         break;
     case 'w':
         range = 7;
-        outlook = strdup("Weekly");
+        outlook = strdup("your Weekly");
         break;
     case 'f':
         range = 14;
-        outlook = strdup("Fortnightly");
+        outlook = strdup("your Fortnightly");
         break;
     case 'm':
         range = 31;
-        outlook = strdup("Monthly");
+        outlook = strdup("your Monthly");
         break;
     case 'q':
         range = 92;
-        outlook = strdup("Quarterly");
+        outlook = strdup("your Quarterly");
         break;
     }
 
-    printf("Welcome to Taskman - here is your %s outlook!\n", outlook);
+    printf("Welcome to Taskman - here is %s outlook!\n\n", outlook);
 
     while (range > 1)
     {
         set_time_date();
         char *dateString = date_calculator_from_range(range);
-        //print_week_and_day(dateString);
+        print_week_and_day(dateString);
 
-        range == 6 ? printf("---- Week %s ----\n", dateString) : printf("");
         task_show(dateString, 'o');
         recurring_task_show(dateString, 'o');
 
@@ -1548,20 +1640,19 @@ void task_outlook(char option)
     {
         set_time_date();
         char *dateString = date_calculator_from_range(range);
-        printf("\n---- Tomorrow %s ----\n", dateString);
+        printf("\n---- Tomorrow ----\n");
         task_show(dateString, 'o');
         recurring_task_show(dateString, 'o');
-        range--;
+        if(!tomorrow) range--;
     }
 
     if (range == 0)
     {
         set_time_date();
         char *dateString = date_calculator_from_range(range);
-        printf("\n---- Today %s ----\n", dateString);
+        printf("\n---- Today ----\n");
         task_show(dateString, 'o');
         recurring_task_show(dateString, 'o');
-        range--;
     }
 
     printf("\n---- tasks ----\n");
@@ -1590,7 +1681,7 @@ void set_config()
     }
 
     // 1. Open database (creates file if it doesn't exist)
-    SqliteDB *db = sqlitedb_open("tasks.db");
+    SqliteDB *db = sqlitedb_open(DB_PATH);
     if(!db || db->last_rc != SQLITE_OK)
     {
         printf("ERROR: %s\n", db ? db->err_msg : "Failed to create pointer for db - Check Memory Allocation");
@@ -1627,3 +1718,61 @@ void set_config()
 }
 
 
+void print_help()
+{
+    printf("\n---------------------------------------------------------------------------------------------\n"
+           "                           Welcome to the help page for Taskman\n"
+           "---------------------------------------------------------------------------------------------\n\n"
+           "Input a task:\n"
+           "by using our formatted task string:  \"task [| date [| time]\"\t\t*24hr time\n\n"
+           " [] = optional -> when time is include taskman automatically makes it a appointment\n"
+           "                  when both time and date are excluded, the task become a general task\n\n"
+           "Example: taskman -n \"Lazer-tag with the fam | 13.10 | 19\"\n"
+           "         taskman -n \"Delivery coming | tue\"\n"
+           "         taskman -n \"Work on the new function that does the thing... ;)\"\n"
+           "                                                     *see Advanced inputs for date string details\n"
+
+           "\n\n"
+           "Input a recurring task:\n"
+           "reccuring task string format: \"task | frequency | first Occurence [| final Occurence [| time]\"\n\n"
+           " [] = optional -> to enter a task with a time and no finish date input \"-\" in field\n"
+           "there is also a recurring task input helper function that guides you through the steps \n"
+           "                                                 \"-nr\" without any further arguments\n\n"
+           "Example: taskman -nr \"Monthly Review | monthly | 15.1\"\n"
+           "         taskman -nr \"Beer walk with the gang | weekly | thur | - | 16:30\"\n"
+           "         taskman -nr \"Daily exercise for the week | daily | mon | fri | 6:30\"\n"
+           "                                                     *see Advanced inputs for date string details\n"
+           "\n\n"
+           "Basic Task Commands:\n"
+           "\t-n <task string>      add a new task\n"
+           "\t-nr <task string>     add new recurring task\n"
+           "\t-s <n>                view tasks in a range of n days\n"
+           "\t-s! <date>            show tasks on given date\n"
+           "\t-sr! <date>           show recurring tasks on given date\n"
+           "\t-c <id>               marks the given id task as completed\n"
+           "\n\n"
+           "Outlook functions:\n"
+           "<outlook Arg>   just running a specific outlook arg will give you the given forcase of your tasks\n\n"
+           "outlook Args: today/tdy/t        for today\n"
+           "              tomorrow/tom       for tomorrow\n"
+           "              week/weekly/wk     for weekly\n"
+           "              fortnightly/fort   for fortnightly\n"
+           "              month/monthly/mth  for monthly\n"
+           "              quarterly/quart    for quarterly\n"
+           "\n\n"
+           "Using reminders:\n"
+           " -check function runs a check of both task and recurring tasks coming up 15mins.\n"
+           " --delay <id> <amount> delays giving id for amount of minutes\n"
+           "set up your favorite pop-up manager i.e xmessage w/ Crontab and never been late for a meeting again :)\n"
+           " *i have commeted out my implementation of xmessage directly from the source code, if you'd prefer that\n"
+           "\n\n"
+           "Advanced inputs:\n"
+           "all date fields have special checkers to assume dates or use day string instead\n"
+           "i.e. inputing just \"22\" for example will assume current month and year. Same go for \"22.10\" assumes current year\n"
+           "date string like; today/tomorow will also work, along with days of the week mon, tue... etc \n"
+           "                                              (will set for the next occurence of given day)\n"
+           "\n\n"
+           "Enjoy your tasks,\n"
+           "Taskman."
+           "\n");
+}

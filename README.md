@@ -6,38 +6,56 @@ Taskman is a simple task manager that allows you to add, remove, and view tasks 
 It stores the data in a simple SQlight database, making it easy to manage and query your tasks.
 
 ## Features
-- Add tasks with a description and date
-- Appiontments are added with time and date for easy searching
+- Add general tasks with a description
+- Dated task for specific days
+- Appointments with a description, date and time
+- Add reccurring tasks (daily, weekly, monthly) with simple syntax
+- View and outlook tasks andWith the command '-n "task | date"' you can add a task with a description and a date.
 - Postpone tasks and appointments
 - Marked tasks and appointments as completed
 - Command to allow a check of appiontments comming up in the next 15mins -> perfect for a Crontab job (-check)
 
 
 ### Task Input
-
-With the command '-n "task | date"' you can add a task with a description and a date.
-Appointments can be added with the command '-n "appointment | date | time"' time must be formatted HH:MM.
-The date Syntax is very flexible, there is only one requriement; that is putting either just the date of the day, and then it will defualt to current month and year (you can put the full date in the format DD.MM.YYYY.) 
-Or you can also use daynames and today/tomorrow as keywords for the date, for example: "Meeting | thursday | 14:00" or "Task due | 12.5". 
-Using day names will set the date to the next occurance of that day, so if today is wednesday, and you put "Dentist | Monday | 14:00" it will set the date to the following week, Monday.
+Taskman -h or --help will show you the help menu with all commands and options. Here is a quick overview of the basic commands:
+task -> "task/appointment | *date | *time"
+recuring tasks -> "task/appointment | frequency | start_date | *end_date | *time"
+ * denotes optional fields and will alter the task type accordingly
 
 
-#### Basic Commands
-- -n "task/appointment | date | time" -> Add a new task / appointment
-- -s range -> Show tasks / appointments wit the range of days. range can also be keywords "today", "tomorrow", "week"
-- -a date -> Showing appointments only on a specific date
-- -s! date -> Show tasks / appointments on a specific date 
-- -sa -> Show all tasks / appointments
-- -check -> Check for appointments in the next 15mins (perfect for a Crontab job)
-- -c id -> Mark task / appointment as completed
-- -p id date -> Postpone task / appointment by date
-- -rm id -> Remove task / appointment
+### Bash Example Session
 
-- -'today/tomorrow/tom/week' can be used in place of a date in the -s command to get the tasks accordingly.
-- -sql "sql query" -> Execute a custom SQL query on the database (advanced users only)
+A few input examples:
+![input1](images/input5.png)
+![input2](images/input2.png)
+![input3](images/input3.png)
+![input4](images/input4.png)
+![input5](images/input6.png)
+![input6](images/input7.png)
+![input7](images/input8.png)
+![input8](images/inputting.png)
 
+then looking at todays tasks:
+![today](images/today.png)
 
+now to complete a task:
+![complete](images/completinh.png)
+
+and now that task is gone from the list:
+![aftercomplete](images/after_complete.png)
+
+some forcase views:
+![outlook](images/monthly.png)
+![outlook2](images/weekly.png)
+![outlook3](images/fort.png)
+![outlook4](images/tomorrow.png)
+
+Crontab reminder:
+![crontab](images/crontab.png)
+sooo beautiful!
 
 
 ## Installation
-Replace "tasks.db" with your desired database file path. Make a Crontab job with the -check command to get notified of upcoming appointments. Then you're ready to go!
+To install Taskman, simply clone the repository and compile the code using gcc with the Makefile provided.
+Best practise is to change the database path from "tasks.db" in the Markfile with your desired database file path. 
+Make a Crontab job with the -check command to get notified of upcoming appointments. Then you're ready to go!

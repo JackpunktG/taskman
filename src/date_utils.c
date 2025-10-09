@@ -67,9 +67,22 @@ char *date_calculator_from_range(uint32_t range)
     return dateString;
 }
 
+uint32_t seconds_since_midnight_minAccuracy()
+{
+    set_time_date();
+    struct tm t = {0};
+    t.tm_hour = currentHour;
+    t.tm_min = currentMin;
+    t.tm_sec = 0;
+
+    return (t.tm_hour * 3600 + t.tm_min * 60);
+
+}
+
+
 void print_week_and_day(char *dateString)
 {
-    const char *days[] = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"};
+    const char *days[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
     char daySt[3];
     char monSt[3];
     char yearSt[5];
@@ -94,9 +107,10 @@ void print_week_and_day(char *dateString)
     mktime(&tm);
     strftime(weekStr, sizeof(weekStr), "%U", &tm);
 
-    tm.tm_mday == 0 ? printf("\n---- week %s ----\n\n", weekStr) : printf("");
+    uint8_t dayInWeek = tm.tm_wday;
 
-    printf("%s\n", days[tm.tm_mday]);
+    dayInWeek == 0 ? printf("\n\n\t\tWeek: %s        \n", weekStr) : printf("");
+    printf("---- %s ----\n", days[dayInWeek]);
 }
 
 
@@ -157,7 +171,7 @@ bool date_validate(char *date)
 
 int input_where(char *when, char **result)
 {
-    trim(when);
+    if (when[0] == ' ') trim(when);
     if (when[0] == '-')
     {
         return 2;
@@ -226,7 +240,6 @@ int input_where(char *when, char **result)
         }
         else if (strcmp(when, "today") == 0 || strcmp(when, "tod") == 0)
         {
-
             snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
             return 1;

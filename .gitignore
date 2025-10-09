@@ -1,7 +1,6 @@
-/.vscode
-out
-taskmanTesting
+testBuild
 *.txt
 *.db
-.config
 *.o
+compile_commands.json
+/.cache
