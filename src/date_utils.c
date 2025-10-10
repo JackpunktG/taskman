@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdbool.h>
-
+/*
 time_t t;
 struct tm tm;
 int currentDay;
@@ -16,18 +16,23 @@ int currentYear;
 int currentHour;
 int currentMin;
 uint8_t dayInWeek;
+*/
 
-
-void set_time_date()
+void set_time_date(struct tm *t)
 {
-    t = time(NULL);
-    tm = *localtime(&t);
-    currentDay = tm.tm_mday;
-    currentMonth = tm.tm_mon + 1;
-    currentYear = tm.tm_year + 1900;
-    currentHour = tm.tm_hour;
-    currentMin = tm.tm_min;
-    dayInWeek = tm.tm_wday;
+    time_t now = time(NULL);
+    *t = *localtime(&now);
+    t->tm_mon += 1;
+    t->tm_year += 1900;
+}
+
+
+uint32_t seconds_since_midnight_minAccuracy()
+{
+    struct tm t = {0};
+    set_time_date(&t);
+
+    return (t.tm_hour * 3600 + t.tm_min * 60);
 }
 
 bool isLeapYear(int year)
@@ -35,7 +40,7 @@ bool isLeapYear(int year)
     return (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0);
 }
 
-int daysInMonth(int day, int month, int year)
+int daysInMonth(int month, int year)
 {
     static const int days[] = {31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
     if (month == 2)
@@ -45,43 +50,39 @@ int daysInMonth(int day, int month, int year)
 
 char *date_calculator_from_range(uint32_t range)
 {
+
+    struct tm t = {0};
+    set_time_date(&t);
+
+
     char *dateString = malloc(11 * sizeof(char));
+    if (dateString == NULL) return NULL;
 
     while (range != 0)
     {
-        currentDay++;
-        if (currentDay > daysInMonth(currentDay, currentMonth, currentYear))
+        t.tm_mday++;
+        if (t.tm_mday > daysInMonth(t.tm_mon, t.tm_year))
         {
-            currentDay = 1;
-            currentMonth++;
-            if (currentMonth > 12)
+            t.tm_mday = 1;
+            t.tm_mon++;
+            if (t.tm_mon > 12)
             {
-                currentMonth = 1;
-                currentYear++;
+                t.tm_mon = 1;
+                t.tm_year++;
             }
         }
         range--;
     }
 
-    snprintf(dateString, 11, "%02d-%02d-%04d", currentDay, currentMonth, currentYear);
+    snprintf(dateString, 11, "%02d-%02d-%04d", t.tm_mday, t.tm_mon, t.tm_year);
     return dateString;
 }
 
-uint32_t seconds_since_midnight_minAccuracy()
-{
-    set_time_date();
-    struct tm t = {0};
-    t.tm_hour = currentHour;
-    t.tm_min = currentMin;
-    t.tm_sec = 0;
-
-    return (t.tm_hour * 3600 + t.tm_min * 60);
-
-}
 
 
 void print_week_and_day(char *dateString)
 {
+
     const char *days[] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
     char daySt[3];
     char monSt[3];
@@ -114,7 +115,7 @@ void print_week_and_day(char *dateString)
 }
 
 
-void find_date_from_day(char *day)
+void find_date_from_day(char *day, int *dayInWeek, int *currentDay, int *currentMonth, int *currentYear)
 {
     int adding = 0;
     if (strcmp(day, "tom") == 0)
@@ -122,7 +123,7 @@ void find_date_from_day(char *day)
     else
     {
         const char *days[] = {"sun", "mon", "tue", "wed", "thu", "fri", "sat"};
-        for (int i = dayInWeek; i <= 6 ; )
+        for (int i = *dayInWeek; i <= 6 ; )
         {
             adding++;
             if (strcmp(day, days[i]) == 0)
@@ -138,21 +139,24 @@ void find_date_from_day(char *day)
     }
     while (adding != 0)
     {
-        currentDay++;
-        if (currentDay > daysInMonth(currentDay, currentMonth, currentYear))
+        (*currentDay)++;
+        if (*currentDay > daysInMonth(*currentMonth, *currentYear))
         {
-            currentDay = 1;
-            currentMonth++;
-            if (currentMonth > 12)
+            *currentDay = 1;
+            (*currentMonth)++;
+            if (*currentMonth > 12)
             {
-                currentMonth = 1;
-                currentYear++;
+                *currentMonth = 1;
+                (*currentYear)++;
+
             }
         }
         adding--;
     }
 
 }
+
+
 
 bool date_validate(char *date)
 {
@@ -164,7 +168,8 @@ bool date_validate(char *date)
 
     if (year < 2025) return false;
     if (month > 12) return false;
-    if (day > daysInMonth(day, month, year)) return false;
+    if (day > daysInMonth(month, year)) return false;
+
 
     return true;
 }
@@ -178,12 +183,20 @@ int input_where(char *when, char **result)
     }
 
     *result = malloc(sizeof(char) * 12);
+    if (*result == NULL) return -1;
+
+    struct tm t = {0};
+    set_time_date(&t);
+    int currentDay = t.tm_mday;
+    int currentMonth = t.tm_mon;
+    int currentYear = t.tm_year;
+    int dayInWeek = t.tm_wday;
 
     if (!isdigit(when[0]))
     {
         if (strcmp(when, "mon") == 0 || strcmp(when, "monday") == 0)
         {
-            find_date_from_day("mon");
+            find_date_from_day("mon", &dayInWeek, &currentDay, &currentMonth, &currentYear);
 
             snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
@@ -191,49 +204,49 @@ int input_where(char *when, char **result)
         }
         else if (strcmp(when, "tue") == 0 || strcmp(when, "tuesday") == 0)
         {
-            find_date_from_day("tue");
+            find_date_from_day("tue", &dayInWeek, &currentDay, &currentMonth, &currentYear);
             snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
             return 1;
         }
         else if (strcmp(when, "wed") == 0 || strcmp(when, "wednesday") == 0)
         {
-            find_date_from_day("wed");
+            find_date_from_day("wed", &dayInWeek, &currentDay, &currentMonth, &currentYear);
             snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
             return 1;
         }
         else if (strcmp(when, "thu") == 0 || strcmp(when, "thur") == 0 || strcmp(when, "thursday") == 0)
         {
-            find_date_from_day("thu");
+            find_date_from_day("thu", &dayInWeek, &currentDay, &currentMonth, &currentYear);
             snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
             return 1;
         }
         else if (strcmp(when, "fri") == 0 || strcmp(when, "friday") == 0)
         {
-            find_date_from_day("fri");
+            find_date_from_day("fri", &dayInWeek, &currentDay, &currentMonth, &currentYear);
             snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
             return 1;
         }
         else if (strcmp(when, "sat") == 0 || strcmp(when, "saturday") == 0)
         {
-            find_date_from_day("sat");
+            find_date_from_day("sat", &dayInWeek, &currentDay, &currentMonth, &currentYear);
             snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
             return 1;
         }
         else if (strcmp(when, "sun") == 0 || strcmp(when, "sunday") == 0)
         {
-            find_date_from_day("sun");
+            find_date_from_day("sun", &dayInWeek, &currentDay, &currentMonth, &currentYear);
             snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
             return 1;
         }
         else if (strcmp(when, "tomorrow") == 0 || strcmp(when, "tom") == 0)
         {
-            find_date_from_day("tom");
+            find_date_from_day("tom", &dayInWeek, &currentDay, &currentMonth, &currentYear);
             snprintf(*result, 12, "%04d-%02d-%02d", currentYear, currentMonth,
                      currentDay);
             return 1;

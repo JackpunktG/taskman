@@ -476,7 +476,6 @@ void task_show(char *arg, char option)
     uint32_t n;
     time_t t;
     struct tm tm;
-    set_time_date();
     t = time(NULL);
     tm = *localtime(&t);
 
@@ -545,7 +544,6 @@ void task_show(char *arg, char option)
 
 void task_insert(char *dateAndTimeArg)
 {
-    set_time_date();
     char *token = strtok(dateAndTimeArg, "|");
 
     trim(token);
@@ -666,7 +664,6 @@ void delay_task(char *id, int timeInMinutes)
 
 void task_postpone(char *id, char *dateAndTimeArg)
 {
-    set_time_date();
     char *token = strtok(dateAndTimeArg, "|");
     trim(token);
 
@@ -1114,7 +1111,6 @@ void recurring_task_show(char *arg, char option)
     int n;
 
     //printf("HERE %s %c\n", arg, option);
-    set_time_date();
     char *searchDate;   //setting here to avoid strtok error in validation of task
     if(option == 'o' || option == 'm' || option == 'w' || option == 'r')
     {
@@ -1218,8 +1214,6 @@ int occurence_input_helper(char *frequency, char *firstOccurence)
 
 void recurring_task_insert(char *taskArgs)
 {
-    set_time_date();
-
     // task | frequency | first occurence | [end occurence] | [time]
     char *field[5];
     int fieldNumber = 0;
@@ -1429,7 +1423,6 @@ void recurring_task_input_guide()
         }
         trim(line);
 
-        set_time_date();
         char *tmpCheck;
         int dateCheck = input_where(line, &tmpCheck);
         if (dateCheck != 1)
@@ -1467,7 +1460,6 @@ void recurring_task_input_guide()
         }
         else
         {
-            set_time_date();
             char *tmpCheck;
             int dateCheck = input_where(line, &tmpCheck);
             if (dateCheck != 1)
@@ -1625,7 +1617,6 @@ void task_outlook(char option)
 
     while (range > 1)
     {
-        set_time_date();
         char *dateString = date_calculator_from_range(range);
         print_week_and_day(dateString);
 
@@ -1638,7 +1629,6 @@ void task_outlook(char option)
 
     if (range == 1)
     {
-        set_time_date();
         char *dateString = date_calculator_from_range(range);
         printf("\n---- Tomorrow ----\n");
         task_show(dateString, 'o');
@@ -1648,7 +1638,6 @@ void task_outlook(char option)
 
     if (range == 0)
     {
-        set_time_date();
         char *dateString = date_calculator_from_range(range);
         printf("\n---- Today ----\n");
         task_show(dateString, 'o');
