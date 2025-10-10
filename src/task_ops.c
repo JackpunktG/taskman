@@ -1030,7 +1030,7 @@ char *validate_recurring_task(char *line, char *arg, char option, char *searchDa
     char *result;
     if (valid)
     {
-        if (option == '!' || option == 'l') //non day selected print out all of
+        if (option == '!' || option == 'l' || option == '.') //non day selected print out all of
         {
             memcpy(day, firstOccurence + 8, 2);
             memcpy(month, firstOccurence + 5, 2);

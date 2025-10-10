@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <stdlib.h>
 
 void run_args(char **args)
 {
@@ -117,7 +118,7 @@ void run_args(char **args)
     //******************************************************************************
     else if (strcmp(args[1], "-sql") == 0)
     {
-        direct_sql(DB_PATH, args[2]);
+        direct_sql("/home/jack/Apps/taskman/tasks.db", args[2]);
     }
     else if (strcmp(args[1], "-h") == 0 || strcmp(args[1], "--help") == 0)
     {
@@ -131,7 +132,7 @@ void run_args(char **args)
 
 int main(int argc, char *args[])
 {
-    if (access(DB_PATH, F_OK) != 0)
+    if (access("/home/jack/Apps/taskman/tasks.db", F_OK) != 0)
     {
         printf("Cannot find database\nIf this is your first time, no worries. We'll create one :)\n");
         set_config();
