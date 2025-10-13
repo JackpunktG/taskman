@@ -160,16 +160,25 @@ void find_date_from_day(char *day, int *dayInWeek, int *currentDay, int *current
 
 bool date_validate(char *date)
 {
+    struct tm t = {0};
+    set_time_date(&t);
+
     uint16_t year;
     uint8_t month;
     uint8_t day;
 
     sscanf(date, "%hu-%hhu-%hhu", &year, &month, &day);
 
-    if (year < 2025) return false;
+    if (year < t.tm_year) return false;
     if (month > 12) return false;
     if (day > daysInMonth(month, year)) return false;
 
+    if (year == t.tm_year)
+    {
+        if (month < t.tm_mon) return false;
+        if (month == t.tm_mon)
+            if (day < t.tm_mday) return false;
+    }
 
     return true;
 }

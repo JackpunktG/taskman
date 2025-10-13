@@ -1,4 +1,4 @@
-testBuild
+out
 *.txt
 *.db
 *.o
