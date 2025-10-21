@@ -112,7 +112,7 @@ int console_print(void *data, int argc, char **argv, char **col_names)
     return 0;
 }
 
-char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_t *type, const char *sql, const char *dbPath)
+char *db_stmt_build_execute_string_return(uint32_t n, const char **input, enum DB_PARAM_TYPE *type, const char *sql, const char *dbPath)
 {
     char *result = NULL;
 
@@ -135,28 +135,31 @@ char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_
     {
         for(int i = 0; i < n; i++)
         {
-            if (type[i] == 1)
+            switch(type[i])
             {
+            case DB_PARAM_TYPE_TEXT:
                 sqlite3_bind_text(stmt, i+1, input[i], -1, SQLITE_STATIC);
-            }
-            else if (type[i] == 2)
-            {
+                break;
+
+            case DB_PARAM_TYPE_INT:
                 int tmp = atoi(input[i]);
                 sqlite3_bind_int(stmt, i+1, tmp);
-            }
-            else
+                break;
+            default:
                 printf("ERROR: Unknown type %d for parameter %d\n", type[i], i+1);
+                break;
+            }
         }
     }
-
     result = sqlitedb_excute_stmt_result_as_string(db, stmt);
 
     sqlite3_finalize(stmt);
     sqlitedb_close(db);
     return result;
+
 }
 
-void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const char *sql, const char *dbPath)
+void db_stmt_build_execute(uint32_t n, const char **input, enum DB_PARAM_TYPE *type, const char *sql, const char *dbPath)
 {
 
     SqliteDB *db = sqlitedb_open(dbPath);
@@ -180,18 +183,22 @@ void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const 
     {
         for(int i = 0; i < n; i++)
         {
-            if (type[i] == 1)
+            switch(type[i])
             {
+            case DB_PARAM_TYPE_TEXT:
                 sqlite3_bind_text(stmt, i+1, input[i], -1, SQLITE_STATIC);
-            }
-            else if (type[i] == 2)
-            {
+                break;
+
+            case DB_PARAM_TYPE_INT:
                 int tmp = atoi(input[i]);
                 sqlite3_bind_int(stmt, i+1, tmp);
-            }
-            else
+                break;
+            default:
                 printf("ERROR: Unknown type %d for parameter %d\n", type[i], i+1);
+                break;
+            }
         }
+
     }
 
     rc = sqlitedb_execute_stmt(db, stmt);

@@ -29,13 +29,18 @@ char *sqlitedb_excute_stmt_result_as_string(SqliteDB *db_wrapper, sqlite3_stmt *
 
 // Builds and executes an SQL query
 // n - number of parameters
+enum DB_PARAM_TYPE
+{
+    DB_PARAM_TYPE_TEXT,
+    DB_PARAM_TYPE_INT
+};
 // input - array of parameter values (as strings)
-// type - array of parameter types (1 = text, 2 = int)
+// type - array of parameter types as enum
 // sql - SQL query with '?' placeholders for parameters
-void db_stmt_build_execute(uint32_t n, const char **input, uint8_t *type, const char *sql, const char *dbPath);
+void db_stmt_build_execute(uint32_t n, const char **input, enum DB_PARAM_TYPE *type, const char *sql, const char *dbPath);
 // Single string result - 1 line per result '\n'. result with '|' delimited after every field
 // Must be freed by caller
-char *db_stmt_build_execute_string_return(uint32_t n, const char **input, uint8_t *type, const char *sql, const char *dbPath);
+char *db_stmt_build_execute_string_return(uint32_t n, const char **input, enum DB_PARAM_TYPE *type, const char *sql, const char *dbPath);
 
 // Direct SQL execution (for debugging/admin)
 void direct_sql(char *dbPath, char *sql);

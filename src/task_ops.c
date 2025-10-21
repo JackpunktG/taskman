@@ -14,7 +14,7 @@
 //task functions
 //************************************************************************************
 
-int range_search(char *arg, int currentDay, char **sqlQuery, char ***input, uint8_t **type)
+int range_search(char *arg, int currentDay, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
     char temp[3];
     sprintf(temp, "%d", currentDay);
@@ -54,22 +54,22 @@ int range_search(char *arg, int currentDay, char **sqlQuery, char ***input, uint
     (*input)[0] = strdup(buffer1);
     (*input)[1] = strdup(buffer2);
 
-    *type = malloc(2 * sizeof(uint8_t));
+    *type = malloc(2 * sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
 
-    (*type)[0] = 2;
-    (*type)[1] = 2;
+    (*type)[0] = DB_PARAM_TYPE_INT;
+    (*type)[1] = DB_PARAM_TYPE_INT;
 
     free(dateString);
 
     return 2;
 }
 
-int day_search(char *arg, char **sqlQuery, char ***input, uint8_t **type)
+int day_search(char *arg, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
     char *token = strtok(arg, "|");
     trim(token);
@@ -115,22 +115,22 @@ int day_search(char *arg, char **sqlQuery, char ***input, uint8_t **type)
     (*input)[0] = strdup(buffer1);
     (*input)[1] = strdup(buffer2);
 
-    *type = malloc(2 * sizeof(uint8_t));
+    *type = malloc(2 * sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
 
-    (*type)[0] = 2;
-    (*type)[1] = 2;
+    (*type)[0] = DB_PARAM_TYPE_INT;
+    (*type)[1] = DB_PARAM_TYPE_INT;
 
     free(dateString);
 
     return 2;
 }
 
-int appointment_search(char *arg, char **sqlQuery, char ***input, uint8_t **type)
+int appointment_search(char *arg, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
     char *token = strtok(arg, "|");
     trim(token);
@@ -174,22 +174,22 @@ int appointment_search(char *arg, char **sqlQuery, char ***input, uint8_t **type
     (*input)[0] = strdup(buffer1);
     (*input)[1] = strdup(buffer2);
 
-    *type = malloc(2 * sizeof(uint8_t));
+    *type = malloc(2 * sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
 
-    (*type)[0] = 2;
-    (*type)[1] = 2;
+    (*type)[0] = DB_PARAM_TYPE_INT;
+    (*type)[1] = DB_PARAM_TYPE_INT;
 
     free(dateString);
 
     return 2;
 }
 
-int reminder_search(int currentDay, int currentMonth, int currentYear, char **sqlQuery, char ***input, uint8_t **type)
+int reminder_search(int currentDay, int currentMonth, int currentYear, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
     struct tm t = {0};
     t.tm_mon = currentMonth;
@@ -228,26 +228,23 @@ int reminder_search(int currentDay, int currentMonth, int currentYear, char **sq
     (*input)[2] = strdup(buffer3);
     (*input)[3] = strdup(buffer4);
 
-    *type = malloc(4 * sizeof(uint8_t));
+    *type = malloc(4 * sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
 
-    (*type)[0] = 2;
-    (*type)[1] = 2;
-    (*type)[2] = 2;
-    (*type)[3] = 2;
+    (*type)[0] = DB_PARAM_TYPE_INT;
+    (*type)[1] = DB_PARAM_TYPE_INT;
+    (*type)[2] = DB_PARAM_TYPE_INT;
+    (*type)[3] = DB_PARAM_TYPE_INT;
 
     return 4;
-
-
 }
 
-int single_search_ID(char *arg, char **sqlQuery, char ***input, uint8_t **type)
+int single_search_ID(char *arg, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
-
     *sqlQuery = strdup("SELECT * FROM tasks WHERE id = ?");
 
     *input = malloc(sizeof(char *));
@@ -259,14 +256,14 @@ int single_search_ID(char *arg, char **sqlQuery, char ***input, uint8_t **type)
 
     (*input)[0] = arg;
 
-    *type = malloc(sizeof(uint8_t));
+    *type = malloc(sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
 
-    (*type)[0] = 2;
+    (*type)[0] = DB_PARAM_TYPE_INT;
 
     return 1;
 }
@@ -363,8 +360,6 @@ char *process_line(char *task, char *id)
     return result;
 }
 
-
-
 void print_task(char *result)
 {
     char *buffer = strdup(result);
@@ -382,11 +377,10 @@ void print_task(char *result)
     }
 
     free(buffer);
-
 }
 
-
-/*void pop_up(char *result)   //IN SOURCE CODE CALLING OF XMESSAGE
+/*
+void pop_up(char *result)   //IN SOURCE CODE CALLING OF XMESSAGE
 {
     char *buffer = strdup(result);
 
@@ -436,8 +430,8 @@ void print_task(char *result)
         line = strtok(NULL, "\n");
     }
     free(buffer);
-}
-*/
+}*/
+
 void pop_up(char *result)
 {
     char *buffer = strdup(result);
@@ -470,7 +464,7 @@ void pop_up(char *result)
     free(buffer);
 }
 
-void task_show(char *arg, char option)
+void task_show(char *arg, enum TASK_SHOW_OPTION option)
 {
 //return for n how many inputs for freeing in task_show
     uint32_t n;
@@ -482,34 +476,34 @@ void task_show(char *arg, char option)
 
     char *sqlQuery = NULL;
     char **input = NULL;
-    uint8_t *type = NULL;
+    enum DB_PARAM_TYPE *type = NULL;
 
     switch (option)
     {
-    case 's':
+    case TASK_SHOW_RANGE:
         n = range_search(arg, tm.tm_mday, &sqlQuery, &input, &type); //outlook of arg days
         break;
-    case 'o':
+    case TASK_SHOW_SPECIFIC_DATE:
         n = day_search(arg, &sqlQuery, &input, &type); //specific day search
         break;
-    case 'a':
+    case TASK_SHOW_APPIONTMENT:
         n = appointment_search(arg, &sqlQuery, &input, &type); //only getting tasks with times
         break;
-    case 'r':
+    case TASK_SHOW_REMINDER:
         n = reminder_search(tm.tm_mday, tm.tm_mon, tm.tm_year, &sqlQuery, &input, &type); //checking for appointments in the next 15mins
         break;
-    case '!':
+    case TASK_SHOW_ID:
         n = single_search_ID(arg, &sqlQuery, &input, &type); //searching for task with given unique ID
         break;
-    case 't':
+    case TASK_SHOW_GENERAL_TASKS:
         n = 0;
         sqlQuery = strdup("SELECT * FROM tasks WHERE date IS NULL AND done = 0");
         break;
-    case '.':
+    case TASK_SHOW_ALL:
         n = 0;
         sqlQuery = strdup("SELECT * FROM tasks ORDER BY date"); //prints entire table
         break;
-    case 'l':
+    case TASK_SHOW_LAST_ENTRY:
         n = 0;
         sqlQuery = strdup("SELECT * FROM tasks ORDER BY ID DESC LIMIT 1"); //prints last added task
         break;
@@ -523,7 +517,7 @@ void task_show(char *arg, char option)
         char *result = db_stmt_build_execute_string_return(n, input, type, sqlQuery, DB_PATH);
 
         //printf("%s", result);
-        option != 'r' ? print_task(result) : pop_up(result);
+        option != TASK_SHOW_APPIONTMENT ? print_task(result) : pop_up(result);
 
         if (n > 1)
         {
@@ -555,10 +549,10 @@ void task_insert(char *dateAndTimeArg)
     {
         const char *sqlQuery = "INSERT INTO tasks(task, date_added) VALUES(?, strftime('%s', 'now'))";
         const char *input[] = { taskString };
-        uint8_t type[] = { 1 };
+        enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT };
         db_stmt_build_execute(1, input, type, sqlQuery, DB_PATH);
 
-        task_show(NULL, 'l');
+        task_show(NULL, TASK_SHOW_LAST_ENTRY);
         printf("ADDED\n");
         free(taskString);
         return;
@@ -605,10 +599,9 @@ void task_insert(char *dateAndTimeArg)
                                  "?, ?) % 86400, ?, strftime('%s', 'now'))";
 
                 const char *input[] = { dateString, dateString, timeString, taskString };
-                uint8_t type[] = { 1, 1, 1, 1 };
+                enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT };
                 db_stmt_build_execute(4, input, type, sqlQuery, DB_PATH);
             }
-
         }
         else
         {
@@ -616,20 +609,18 @@ void task_insert(char *dateAndTimeArg)
                              "?, 'start of day'), ?, strftime('%s', 'now'))";
 
             const char *input[] = { dateString, taskString };
-            uint8_t type[] = { 1, 1 };
+            enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT };
             db_stmt_build_execute(2, input, type, sqlQuery, DB_PATH);
         }
     }
 
-    task_show(NULL, 'l');
+    task_show(NULL, TASK_SHOW_LAST_ENTRY);
     printf("ADDED\n");
 
     free(temp);
     free(dateString);
     free(taskString);
 }
-
-
 
 void task_complete(char *id) //when postponing general tasks, they get the date of completion on the date
 {
@@ -638,13 +629,12 @@ void task_complete(char *id) //when postponing general tasks, they get the date 
                      "ELSE date END "
                      "WHERE id = ?";
     const char *input[] = { id };
-    uint8_t type[] = { 2 };
+    enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_INT };
 
     db_stmt_build_execute(1, input, type, sqlQuery, DB_PATH);
 
-    task_show(id, '!');
+    task_show(id, TASK_SHOW_ID);
 }
-
 
 void delay_task(char *id, int timeInMinutes)
 {
@@ -653,12 +643,11 @@ void delay_task(char *id, int timeInMinutes)
     sprintf(additionStr, "%d", addition);
     char *sqlQuery = "UPDATE tasks SET time = time + ?, done = 0 WHERE id = ?";
     const char *input[] = { additionStr, id };
-    uint8_t type[] = { 1, 2 };
-
+    enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_INT };
 
     db_stmt_build_execute(2, input, type, sqlQuery, DB_PATH);
 
-    task_show(id, '!');
+    task_show(id, TASK_SHOW_ID);
     printf("DELAYED\n");
 }
 
@@ -703,7 +692,7 @@ void task_postpone(char *id, char *dateAndTimeArg)
                                  "time = strftime('%s', ?, ?) % 86400 WHERE id = ?";
 
                 const char *input[] = { dateString, dateString, timeString, id };
-                uint8_t type[] = { 1, 1, 1, 2 };
+                enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_INT };
                 db_stmt_build_execute(4, input, type, sqlQuery, DB_PATH);
 
                 free(timeString);
@@ -714,14 +703,13 @@ void task_postpone(char *id, char *dateAndTimeArg)
             char *sqlQuery = "UPDATE tasks SET date = strftime('%s', ?, 'start of day') WHERE id = ?";
 
             const char *input[] = { dateString, id };
-            uint8_t type[] = { 1, 2 };
+            enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_INT };
             db_stmt_build_execute(2, input, type, sqlQuery, DB_PATH);
         }
     }
 
-    task_show(id, '!');
+    task_show(id, TASK_SHOW_ID);
     printf("UPDATED\n");
-
 
     free(dateString);
     free(tmp);
@@ -730,7 +718,7 @@ void task_postpone(char *id, char *dateAndTimeArg)
 void remove_task(char *id)
 {
     printf("Are you sure you want to remove task:\n");
-    task_show(id, '!');
+    task_show(id, TASK_SHOW_ID);
 
     printf("(y/n)?\n");
     char response = getchar();
@@ -743,7 +731,7 @@ void remove_task(char *id)
 
     const char *sqlQuery = "DELETE FROM tasks WHERE id = ?";
     const char *input[] = { id };
-    uint8_t type[] = { 2 };
+    enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_INT };
     db_stmt_build_execute(1, input, type, sqlQuery, DB_PATH);
 }
 
@@ -751,8 +739,7 @@ void remove_task(char *id)
 //recurring tasks
 //************************************************************************************
 
-
-int recurring_day_search(char *dateString, char **sqlQuery, char ***input, uint8_t **type)
+int recurring_day_search(char *dateString, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
     *sqlQuery = strdup("SELECT * FROM recurring_tasks WHERE date_begin <= ? AND (date_expires >= ? OR date_expires IS NULL) ORDER BY time");
 
@@ -766,20 +753,20 @@ int recurring_day_search(char *dateString, char **sqlQuery, char ***input, uint8
     (*input)[0] = strdup(dateString);
     (*input)[1] = strdup(dateString);
 
-    *type = malloc(sizeof(uint8_t));
+    *type = malloc(2 * sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
 
-    (*type)[0] = 1;
-    (*type)[1] = 1;
+    (*type)[0] = DB_PARAM_TYPE_TEXT;
+    (*type)[1] = DB_PARAM_TYPE_TEXT;
 
     return 2;
 }
 
-int recurring_timed_task_check(char *dateString, char **sqlQuery, char ***input, uint8_t **type)
+int recurring_timed_task_check(char *dateString, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
     uint32_t time = seconds_since_midnight_minAccuracy();
     time = (time + 15 * 60) % 86400;
@@ -799,21 +786,21 @@ int recurring_timed_task_check(char *dateString, char **sqlQuery, char ***input,
     (*input)[1] = strdup(dateString);
     (*input)[2] = strdup(timeStr);
 
-    *type = malloc(sizeof(uint8_t));
+    *type = malloc(3 * sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
 
-    (*type)[0] = 1;
-    (*type)[1] = 1;
-    (*type)[2] = 2;
+    (*type)[0] = DB_PARAM_TYPE_TEXT;
+    (*type)[1] = DB_PARAM_TYPE_TEXT;
+    (*type)[2] = DB_PARAM_TYPE_INT;
 
     return 3;
 }
 
-int recurring_single_search_ID(char *id, char **sqlQuery, char ***input, uint8_t **type)
+int recurring_single_search_ID(char *id, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
     *sqlQuery = strdup("SELECT * FROM recurring_tasks WHERE id = ?");
 
@@ -825,18 +812,18 @@ int recurring_single_search_ID(char *id, char **sqlQuery, char ***input, uint8_t
     }
     (*input)[0] = id;
 
-    *type = malloc(sizeof(uint8_t));
+    *type = malloc(sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
-    (*type)[0] = 2;
+    (*type)[0] = DB_PARAM_TYPE_INT;
 
     return 1;
 }
 
-int recurring_task_only_month(char *dateString, char **sqlQuery, char ***input, uint8_t **type)
+int recurring_task_only_month(char *dateString, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
     *sqlQuery = strdup("SELECT * FROM recurring_tasks WHERE frequency = 'monthly' AND date_begin <= ? AND (date_expires >= ? OR date_expires IS NULL) ORDER BY time");
 
@@ -850,20 +837,20 @@ int recurring_task_only_month(char *dateString, char **sqlQuery, char ***input, 
     (*input)[0] = strdup(dateString);
     (*input)[1] = strdup(dateString);
 
-    *type = malloc(sizeof(uint8_t));
+    *type = malloc(2 * sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
 
-    (*type)[0] = 1;
-    (*type)[1] = 1;
+    (*type)[0] = DB_PARAM_TYPE_TEXT;
+    (*type)[1] = DB_PARAM_TYPE_TEXT;
 
     return 2;
 }
 
-int recurring_task_only_week(char *dateString, char **sqlQuery, char ***input, uint8_t **type)
+int recurring_task_only_week(char *dateString, char **sqlQuery, char ***input, enum DB_PARAM_TYPE **type)
 {
     *sqlQuery = strdup("SELECT * FROM recurring_tasks WHERE frequency = 'weekly' AND date_begin <= ? AND (date_expires >= ? OR date_expires IS NULL) ORDER BY time");
 
@@ -877,20 +864,21 @@ int recurring_task_only_week(char *dateString, char **sqlQuery, char ***input, u
     (*input)[0] = strdup(dateString);
     (*input)[1] = strdup(dateString);
 
-    *type = malloc(sizeof(uint8_t));
+    *type = malloc(2 * sizeof(enum DB_PARAM_TYPE));
     if (*type == NULL)
     {
         printf("ERROR - Memory allocation failed");
         return -1;
     }
 
-    (*type)[0] = 1;
-    (*type)[1] = 1;
+    (*type)[0] = DB_PARAM_TYPE_TEXT;
+    (*type)[1] = DB_PARAM_TYPE_TEXT;
 
     return 2;
 }
 
-/*void recurring_pop_up(char *result)       //IN SOURCE CODE CALLING OF XMESSAGE
+/*
+void recurring_pop_up(char *result)       //IN SOURCE CODE CALLING OF XMESSAGE
 {
 
     size_t len = strlen(result);
@@ -948,7 +936,7 @@ bool is_recurring_task_valid_on_given_day(char *date, char *frequency, char *sea
     return false;
 }
 
-char *validate_recurring_task(char *line, char *arg, char option, char *searchDate, bool *valid, char *id)
+char *validate_recurring_task(char *line, char *arg, enum TASK_SHOW_OPTION option, char *searchDate, bool *valid, char *id)
 {
     char *buffer = strdup(line);
     char taskID[8] = {0};
@@ -1019,18 +1007,16 @@ char *validate_recurring_task(char *line, char *arg, char option, char *searchDa
         }
     }
 
-
     char day[3];
     char month[3];
-    if (option == 'o' || option == 'm' || option == 'w' || option == 'r')
+    if (option == TASK_SHOW_SPECIFIC_DATE || option == TASK_SHOW_MONTHLY || option == TASK_SHOW_WEEKLY || option == TASK_SHOW_REMINDER)
         *valid = is_recurring_task_valid_on_given_day(date, frequency, searchDate) ? true : false;
     else *valid = true;
-
 
     char *result;
     if (valid)
     {
-        if (option == '!' || option == 'l' || option == '.') //non day selected print out all of
+        if (option == TASK_SHOW_ID || option == TASK_SHOW_LAST_ENTRY || option == TASK_SHOW_ALL) //non day selected print out all of
         {
             memcpy(day, firstOccurence + 8, 2);
             memcpy(month, firstOccurence + 5, 2);
@@ -1081,7 +1067,7 @@ char *validate_recurring_task(char *line, char *arg, char option, char *searchDa
     return result;
 }
 
-void recurring_task_printer(char *result, char *arg, char option, char *searchDate)
+void recurring_task_printer(char *result, char *arg, enum TASK_SHOW_OPTION option, char *searchDate)
 {
     //printf("HERE\n");
     //printf("!%s\n", result);
@@ -1094,8 +1080,7 @@ void recurring_task_printer(char *result, char *arg, char option, char *searchDa
         //printf("%s\n", line);
         char *task = validate_recurring_task(line, arg, option, searchDate, &valid,  id);
 
-        if (valid) (option != 'r') ? printf("%s\n", task) : recurring_pop_up(task);
-
+        if (valid) (option != TASK_SHOW_REMINDER) ? printf("%s\n", task) : recurring_pop_up(task);
 
         free(task);
         line = strtok(NULL, "\n");
@@ -1103,16 +1088,16 @@ void recurring_task_printer(char *result, char *arg, char option, char *searchDa
     free(line);
 }
 
-void recurring_task_show(char *arg, char option)
+void recurring_task_show(char *arg, enum TASK_SHOW_OPTION option)
 {
     char *sqlQuery = NULL;
     char **input = NULL;
-    uint8_t *type = NULL;
+    enum DB_PARAM_TYPE *type = NULL;
     int n;
 
     //printf("HERE %s %c\n", arg, option);
     char *searchDate;   //setting here to avoid strtok error in validation of task
-    if(option == 'o' || option == 'm' || option == 'w' || option == 'r')
+    if(option == TASK_SHOW_SPECIFIC_DATE || option == TASK_SHOW_MONTHLY || option == TASK_SHOW_WEEKLY || option == TASK_SHOW_REMINDER)
     {
         int dateCheck = input_where(arg, &searchDate);
         if (dateCheck != 1)
@@ -1125,29 +1110,28 @@ void recurring_task_show(char *arg, char option)
         }
     }
 
-
     switch (option)
     {
-    case 'o' :
+    case TASK_SHOW_SPECIFIC_DATE :
         n = recurring_day_search(searchDate, &sqlQuery, &input, &type); //specific day search
         break;
-    case '!':
+    case TASK_SHOW_ID:
         n = recurring_single_search_ID(arg, &sqlQuery, &input, &type); //searching for task with given unique ID
         break;
-    case 'm':
+    case TASK_SHOW_MONTHLY:
         n = recurring_task_only_month(searchDate, &sqlQuery, &input, &type); //searching only monthly task for outlook function
         break;
-    case 'w':
-        n = recurring_task_only_week(searchDate, &sqlQuery, &input, &type); //searching only monthly task for outlook function
+    case TASK_SHOW_WEEKLY:
+        n = recurring_task_only_week(searchDate, &sqlQuery, &input, &type); //searching only week task for outlook function
         break;
-    case 'r':
+    case TASK_SHOW_REMINDER:
         n = recurring_timed_task_check(searchDate, &sqlQuery, &input, &type); //checking for recurring appointments in the next 15mins
         break;
-    case '.':
+    case TASK_SHOW_ALL:
         sqlQuery = strdup("SELECT * FROM recurring_tasks ORDER BY date_begin DESC");
         n = 0;
         break;
-    case 'l':
+    case TASK_SHOW_LAST_ENTRY:
         sqlQuery = strdup("SELECT * FROM recurring_tasks ORDER BY ID DESC LIMIT 1");
         n = 0;
         break;
@@ -1175,7 +1159,6 @@ void recurring_task_show(char *arg, char option)
     free(input);
     free(type);
     free(sqlQuery);
-
 }
 
 int frequency_input_helper(char *occurance)
@@ -1209,7 +1192,6 @@ int occurence_input_helper(char *frequency, char *firstOccurence)
         return day;
     else
         return -1;
-
 }
 
 void recurring_task_insert(char *taskArgs)
@@ -1272,7 +1254,6 @@ void recurring_task_insert(char *taskArgs)
     char occurenceString[3];
     sprintf(occurenceString, "%d", occurence);
 
-
     char *endDateString;
     bool hasEndDate;
     if (fieldNumber > 3)
@@ -1300,7 +1281,7 @@ void recurring_task_insert(char *taskArgs)
                          "VALUES(?, ?, ?, ?)";
 
         const char *input[] = { frequency, occurenceString, taskString, firstOccurence };
-        uint8_t type[] = { 1, 2, 1, 1 };
+        enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_INT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT };
         db_stmt_build_execute(4, input, type, sqlQuery, DB_PATH);
         printf("%s\n", firstOccurence);
     }
@@ -1310,7 +1291,7 @@ void recurring_task_insert(char *taskArgs)
                          "VALUES(?, ?, ?, ?, ?)";
 
         const char *input[] = { frequency, occurenceString, taskString, firstOccurence, endDateString };
-        uint8_t type[] = { 1, 2, 1, 1, 1 };
+        enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_INT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT };
         db_stmt_build_execute(5, input, type, sqlQuery, DB_PATH);
 
         free(endDateString);
@@ -1338,7 +1319,7 @@ void recurring_task_insert(char *taskArgs)
                              "VALUES(?, ?, strftime('%s', ?, ?) % 86400, ?, ?, ?)";
 
             const char *input[] = { frequency, occurenceString, firstOccurence, timeString, taskString, firstOccurence, endDateString };
-            uint8_t type[] = { 1, 2, 1, 1, 1, 1, 1};
+            enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_INT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT};
             db_stmt_build_execute(7, input, type, sqlQuery, DB_PATH);
         }
         else // entry for task with time but no endtime
@@ -1347,7 +1328,7 @@ void recurring_task_insert(char *taskArgs)
                              "VALUES(?, ?, strftime('%s', ?, ?) % 86400, ?, ?)";
 
             const char *input[] = { frequency, occurenceString, firstOccurence, timeString, taskString, firstOccurence };
-            uint8_t type[] = { 1, 2, 1, 1, 1, 1, };
+            enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_INT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT, DB_PARAM_TYPE_TEXT };
             db_stmt_build_execute(6, input, type, sqlQuery, DB_PATH);
         }
 
@@ -1359,7 +1340,7 @@ void recurring_task_insert(char *taskArgs)
     free(frequency);
     for (int j = 0; j < fieldNumber; j++) free(field[j]);
 
-    recurring_task_show(NULL, 'l');
+    recurring_task_show(NULL, TASK_SHOW_LAST_ENTRY);
     printf("Recurring task added!\n");
 }
 
@@ -1409,7 +1390,6 @@ void recurring_task_input_guide()
             correct = true;
     }
     while (!correct);
-
 
     do
     {
@@ -1554,7 +1534,7 @@ void recurring_task_input_guide()
 void remove_recurring_task(char *id)
 {
     printf("Are you sure you want to remove recurring task:\n");
-    recurring_task_show(id, '!');
+    recurring_task_show(id, TASK_SHOW_ID);
 
     printf("(y/n)?\n");
     char response = getchar();
@@ -1567,18 +1547,17 @@ void remove_recurring_task(char *id)
 
     const char *sqlQuery = "DELETE FROM recurring_tasks WHERE id = ?";
     const char *input[] = { id };
-    uint8_t type[] = { 2 };
+    enum DB_PARAM_TYPE type[] = { DB_PARAM_TYPE_INT };
     db_stmt_build_execute(1, input, type, sqlQuery, DB_PATH);
 }
 
 
-//#### Recurring task input helper, update and delete to be added ####
 
 //************************************************************************************
 //set up and outlook functions
 //************************************************************************************
 
-void task_outlook(char option)
+void task_outlook(enum OUTLOOK_OPTION option)
 {
     uint32_t range;
     char *outlook;
@@ -1586,28 +1565,28 @@ void task_outlook(char option)
 
     switch (option)
     {
-    case '!':
+    case OUTLOOK_TODAY:
         range = 0;
         outlook = strdup("Today's");
         break;
-    case 't':
+    case OUTLOOK_TOMORROW:
         range = 1;
         outlook = strdup("Tomorrow's");
         tomorrow = true;
         break;
-    case 'w':
+    case OUTLOOK_WEEKLY:
         range = 7;
         outlook = strdup("your Weekly");
         break;
-    case 'f':
+    case OUTLOOK_FORTNIGHTLY:
         range = 14;
         outlook = strdup("your Fortnightly");
         break;
-    case 'm':
+    case OUTLOOK_MONTHLY:
         range = 31;
         outlook = strdup("your Monthly");
         break;
-    case 'q':
+    case OUTLOOK_QUARTERLY:
         range = 92;
         outlook = strdup("your Quarterly");
         break;
@@ -1620,8 +1599,8 @@ void task_outlook(char option)
         char *dateString = date_calculator_from_range(range);
         print_week_and_day(dateString);
 
-        task_show(dateString, 'o');
-        recurring_task_show(dateString, 'o');
+        task_show(dateString, TASK_SHOW_SPECIFIC_DATE);
+        recurring_task_show(dateString, TASK_SHOW_SPECIFIC_DATE);
 
         range--;
         printf("\n");
@@ -1631,8 +1610,8 @@ void task_outlook(char option)
     {
         char *dateString = date_calculator_from_range(range);
         printf("\n---- Tomorrow ----\n");
-        task_show(dateString, 'o');
-        recurring_task_show(dateString, 'o');
+        task_show(dateString, TASK_SHOW_SPECIFIC_DATE);
+        recurring_task_show(dateString, TASK_SHOW_SPECIFIC_DATE);
         if(!tomorrow) range--;
     }
 
@@ -1640,19 +1619,15 @@ void task_outlook(char option)
     {
         char *dateString = date_calculator_from_range(range);
         printf("\n---- Today ----\n");
-        task_show(dateString, 'o');
-        recurring_task_show(dateString, 'o');
+        task_show(dateString, TASK_SHOW_SPECIFIC_DATE);
+        recurring_task_show(dateString, TASK_SHOW_SPECIFIC_DATE);
     }
 
     printf("\n---- tasks ----\n");
-    task_show(NULL, 't');
-
-
-
+    task_show(NULL, TASK_SHOW_GENERAL_TASKS);
 
     free(outlook);
 }
-
 
 void set_config()
 {

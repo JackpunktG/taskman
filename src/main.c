@@ -18,15 +18,15 @@ void run_args(char **args)
     }
     else if (strcmp(args[1], "-s") == 0)
     {
-        task_show(args[2], 's');
+        task_show(args[2], TASK_SHOW_RANGE);
     }
     else if(strcmp(args[1], "-id") == 0)
     {
-        task_show(args[2], '!');
+        task_show(args[2], TASK_SHOW_ID);
     }
     else if (strcmp(args[1], "-s!") == 0)
     {
-        task_show(args[2], 'o');
+        task_show(args[2], TASK_SHOW_SPECIFIC_DATE);
     }
     else if (strcmp(args[1], "-c") == 0)
     {
@@ -34,11 +34,11 @@ void run_args(char **args)
     }
     else if (strcmp(args[1], "-a") == 0)
     {
-        task_show(args[2], 'a');
+        task_show(args[2], TASK_SHOW_APPIONTMENT);
     }
     else if (strcmp(args[1], "-sa") == 0)
     {
-        task_show(NULL, '.');
+        task_show(NULL, TASK_SHOW_ALL);
     }
     else if (strcmp(args[1], "-p") == 0)
     {
@@ -55,7 +55,7 @@ void run_args(char **args)
     }
     else if(strcmp(args[1], "task") == 0 || strcmp(args[1], "tasks") == 0)
     {
-        task_show(NULL, 't');
+        task_show(NULL, TASK_SHOW_GENERAL_TASKS);
     }
     //******************************************************************************
     //recurring task Args
@@ -67,7 +67,7 @@ void run_args(char **args)
     }
     else if(strcmp(args[1], "-sr!") == 0)
     {
-        recurring_task_show(args[2], 'o');
+        recurring_task_show(args[2], TASK_SHOW_SPECIFIC_DATE);
     }
     else if (strcmp(args[1], "-rmr") == 0)
     {
@@ -75,43 +75,43 @@ void run_args(char **args)
     }
     else if(strcmp(args[1], "-idr") == 0)
     {
-        recurring_task_show(args[2], '!');
+        recurring_task_show(args[2], TASK_SHOW_ID);
     }
     else if (strcmp(args[1], "-sra") == 0)
     {
-        recurring_task_show(NULL, '.');
+        recurring_task_show(NULL, TASK_SHOW_ALL);
     }
     //******************************************************************************
     //Combination and outlook Args
     //******************************************************************************
     else if(strcmp(args[1], "today") == 0 || strcmp(args[1], "tdy") == 0 || strcmp(args[1], "t") == 0)
     {
-        task_outlook('!');
+        task_outlook(OUTLOOK_TODAY);
     }
     else if(strcmp(args[1], "tomorrow") == 0 || strcmp(args[1], "tom") == 0)
     {
-        task_outlook('t');
+        task_outlook(OUTLOOK_TOMORROW);
     }
     else if(strcmp(args[1], "week") == 0 || strcmp(args[1], "weekly") == 0 || strcmp(args[1], "wk") == 0)
     {
-        task_outlook('w');
+        task_outlook(OUTLOOK_WEEKLY);
     }
     else if(strcmp(args[1], "fort") == 0 || strcmp(args[1], "fortnightly") == 0)
     {
-        task_outlook('f');
+        task_outlook(OUTLOOK_FORTNIGHTLY);
     }
     else if(strcmp(args[1], "month") == 0 || strcmp(args[1], "monthly") == 0 || strcmp(args[1], "mth") == 0)
     {
-        task_outlook('m');
+        task_outlook(OUTLOOK_MONTHLY);
     }
     else if(strcmp(args[1], "quarterly") == 0 || strcmp(args[1], "quart") == 0)
     {
-        task_outlook('q');
+        task_outlook(OUTLOOK_QUARTERLY);
     }
     else if (strcmp(args[1], "-check") == 0)
     {
-        task_show(NULL, 'r');
-        recurring_task_show("today", 'r');
+        task_show(NULL, TASK_SHOW_REMINDER);
+        recurring_task_show("today", TASK_SHOW_REMINDER);
     }
     //******************************************************************************
     //misc. Args
