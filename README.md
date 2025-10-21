@@ -73,3 +73,9 @@ sooo beautiful!
 To install Taskman, simply clone the repository and compile the code using gcc with the Makefile provided.
 Best practise is to change the database path from "tasks.db" in the Markfile with your desired database file path. 
 Make a Crontab job with the -check command to get notified of upcoming appointments. Then you're ready to go!
+
+
+### To come
+- Add editing ability for recurring tasks
+- Nicer print out formatting
+- Sleeker processing of args

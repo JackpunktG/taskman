@@ -66,6 +66,16 @@ run_test "Complete task" "./test_taskman -c $TASK_ID"
 run_test "Postpone task" "./test_taskman -p $TASK_ID 'friday | 16:00'"
 echo "y" | run_test "Delete task" "./test_taskman -d $TASK_ID"
 
+echo "Testing Error Input Handling"
+# Test error handling
+run_test "Add task with invalid date" "./test_taskman -n 'Invalid date task | 32.11'" 
+run_test "Invaild date format" "./test_taskman -n 'Invalid format task | 30.02'" 
+run_test "Add appointment with invalid time" "./test_taskman -n 'Invalid time appointment | tomorrow | - | 9:70'" 
+run_test "Add recurring task with invalid frequency" "./test_taskman -nr 'Invalid recurring task | yearly | tomorrow'" 
+run_test "Add task with invalid time" "./test_taskman -n 'Invalid time task | tomorrow | 25:00'" 
+run_test "Try for Leap Year (add 29.2 for current year)" "./test_taskman -n 'Leap Year? | 29.02'" 
+
+
 
 # Test views
 run_test "Show tomorrow tasks" "./test_taskman tomorrow"
