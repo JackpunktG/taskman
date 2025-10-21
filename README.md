@@ -75,7 +75,7 @@ Best practise is to change the database path from "tasks.db"
 Makefile to your desired path.
 
 ```bash
-make OUT=<excutable_name> DBPATH=<database_path>
+make OUT=<excutable_name> DB_PATH=<database_path>
 
 ```
 
